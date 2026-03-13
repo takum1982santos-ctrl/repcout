@@ -2180,7 +2180,7 @@ function RepCountApp() {
             </div>
           </div>
           <button onClick={() => { clearInterval(timerRef.current); setCurrentSet(cs=>cs+1); setReps(0); setActiveStep(0); setTimeLeft(duration); setScreen("counting"); playBeep("go"); }} style={{ width:"100%", padding:"16px", background:C, border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ SALTAR DESCANSO</button>
-          <button onClick={resetApp} style={{ background:"none", border:"1px solid #333", borderRadius:"10px", padding:"10px 20px", color:"#666", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif" }}>ABANDONAR</button>
+          <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>ABANDONAR</button>
         </div>
       )}
 
