@@ -108,22 +108,7 @@ const MSG_SET = [
   "DESCANSÁ. DESPUÉS SEGUÍS PELEANDO.",
   "BUEN TRABAJO, SOLDADO. NO TE DUERMAS.",
 ];
-const MSG_REPS = [
-  "¿CANSADO? EL CANSANCIO ES TEMPORAL. EL ORGULLO ES PARA SIEMPRE.",
-  "TU CUERPO QUIERE PARAR. VOS NO. SEGUÍ.",
-  "EL DOLOR ES DEBILIDAD SALIENDO DE TU CUERPO.",
-  "SOS MÁS FUERTE DE LO QUE CREÉS. DEMOSTRALO.",
-  "NO LE FALLES A TU VERSIÓN DE MAÑANA.",
-  "ENFOCATE. CONCENTRATE. NO AFLOJÉS.",
-  "CADA REP TE SEPARA DEL QUE ERAS AYER.",
-  "LA MENTE CEDE ANTES QUE EL CUERPO. AGUANTÁ.",
-  "ESTO ES LO QUE SEPARA A LOS QUE LLEGAN DE LOS QUE SE RINDEN.",
-];
-const MSG_PR = [
-  "NUEVO RECORD. ESO ES EVOLUCIÓN, SOLDADO.",
-  "LÍMITE SUPERADO. AHORA ESE ES EL NUEVO MÍNIMO.",
-  "NADIE TE REGALÓ ESO. LO GANASTE.",
-];
+
 const rand = arr => arr[Math.floor(Math.random() * arr.length)];
 const PR_KEY         = "repcount-prs";
 const ROUTINES_KEY   = "repcount-routines";
@@ -288,21 +273,6 @@ const BONES = [
   [0,1],[1,2],[1,3],[2,4],[4,6],[3,5],[5,7],[2,8],[3,8],[8,9],[8,10],[9,11],[10,12]
 ];
 
-// ─── MAPA FASE → PASO VISUAL ──────────────────────────────────────────────
-// Para cada ejercicio de 2 pasos, qué índice de paso corresponde a cada fase
-const PHASE_TO_STEP = {
-  flexiones:             { up:0, down:1 },
-  flexiones_diamante:    { up:0, down:1 },
-  dips:                  { up:0, down:1 },
-  dominadas_ancho:       { up:1, down:0 },
-  dominadas_cerrado:     { up:1, down:0 },
-  dominadas_neutro:      { up:1, down:0 },
-  sentadillas:           { up:0, down:1 },
-  zancadas:              { up:0, down:1 },
-  sentadilla_una_pierna: { up:0, down:1 },
-  // burpees no están — tienen 6-7 pasos, la animación manual es mejor
-};
-
 // ─── MOVENET POSE DETECTION ────────────────────────────────────────────────
 
 // Índices MoveNet: 0=nariz,1=ojo_i,2=ojo_d,3=oreja_i,4=oreja_d,
@@ -327,64 +297,20 @@ const MIN_CONF = 0.35;
 const REP_DETECTORS = {
   // ── EMPUJE: ángulo de codo, mejor lado ──────────────────────────────────
   flexiones: (kps) => {
-    // Necesitamos hombro, muñeca, cadera y tobillo para verificar plancha
-    const cL = Math.min(kps[5][2], kps[9][2], kps[11][2], kps[15][2]);
-    const cR = Math.min(kps[6][2], kps[10][2], kps[12][2], kps[16][2]);
+    const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
+    const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
-
-    const sh = L ? kps[5]  : kps[6];   // hombro
-    const wr = L ? kps[9]  : kps[10];  // muñeca (fija en el suelo)
-    const hp = L ? kps[11] : kps[12];  // cadera
-    const an = L ? kps[15] : kps[16];  // tobillo
-
-    // ── VERIFICAR PLANCHA ──────────────────────────────────────────────────
-    // En plancha el cuerpo es horizontal: span X (hombro→tobillo) >> span Y
-    // Parado: span Y >> span X
-    const spanY = Math.abs(an[1] - sh[1]);
-    const spanX = Math.abs(an[0] - sh[0]);
-    const isPlank = spanY < spanX * 0.65; // cuerpo más horizontal que vertical
-    if (!isPlank) return { angle: null, phase: null, conf: 0 };
-
-    // ── MOVIMIENTO: distancia vertical hombro → muñeca ────────────────────
-    // La muñeca está fija en el suelo (Y grande en coords imagen)
-    // El hombro sube (UP) y baja (DOWN) relativo a la muñeca
-    const dropY = wr[1] - sh[1]; // positivo = hombro por encima de muñeca
-    const scale = Math.max(spanX, 50); // escala = ancho del cuerpo
-    const dropRatio = dropY / scale;
-
-    // DOWN: hombro cerca del suelo (dropRatio pequeño)
-    // UP:   hombro lejos del suelo (dropRatio grande)
-    const phase = dropRatio < 0.18 ? "down" : dropRatio > 0.45 ? "up" : null;
-
-    // Ángulo de codo — solo para el overlay informativo
-    const a = calcAngle(sh, L ? kps[7] : kps[8], wr);
-    return { angle: Math.round(a), phase, conf: L ? cL : cR };
+    const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
+    return { angle: Math.round(a), phase: a < 90 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
   },
   flexiones_diamante: (kps) => {
-    const cL = Math.min(kps[5][2], kps[9][2], kps[11][2], kps[15][2]);
-    const cR = Math.min(kps[6][2], kps[10][2], kps[12][2], kps[16][2]);
+    const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
+    const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
-
-    const sh = L ? kps[5]  : kps[6];
-    const wr = L ? kps[9]  : kps[10];
-    const an = L ? kps[15] : kps[16];
-
-    const spanY = Math.abs(an[1] - sh[1]);
-    const spanX = Math.abs(an[0] - sh[0]);
-    const isPlank = spanY < spanX * 0.65;
-    if (!isPlank) return { angle: null, phase: null, conf: 0 };
-
-    const dropY = wr[1] - sh[1];
-    const scale = Math.max(spanX, 50);
-    const dropRatio = dropY / scale;
-
-    // Diamante requiere bajar un poco más → umbral down más estricto
-    const phase = dropRatio < 0.14 ? "down" : dropRatio > 0.45 ? "up" : null;
-
-    const a = calcAngle(sh, L ? kps[7] : kps[8], wr);
-    return { angle: Math.round(a), phase, conf: L ? cL : cR };
+    const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
+    return { angle: Math.round(a), phase: a < 85 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
   },
   dips: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
@@ -401,15 +327,7 @@ const REP_DETECTORS = {
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
-    // Verificar que la cadera realmente bajó (ratio Y entre hombro, cadera y tobillo)
-    // Cuando está parado con rodilla al pecho, hipRatio ≈ 0.45-0.5. Cuando está en sentadilla real, hipRatio > 0.55
-    const sY  = L ? kps[5][1]  : kps[6][1];   // hombro Y
-    const hY  = L ? kps[11][1] : kps[12][1];  // cadera Y
-    const anY = L ? kps[15][1] : kps[16][1];  // tobillo Y
-    const hipRatio = anY > sY ? (hY - sY) / (anY - sY) : 0.5;
-    const hipDropped = hipRatio > 0.54; // cadera bajó al menos un 54% del recorrido hombro→tobillo
-    const phase = (a < 100 && hipDropped) ? "down" : a > 160 ? "up" : null;
-    return { angle: Math.round(a), phase, conf: L ? cL : cR };
+    return { angle: Math.round(a), phase: a < 100 ? "down" : a > 160 ? "up" : null, conf: L ? cL : cR };
   },
   zancadas: (kps) => {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
@@ -417,13 +335,7 @@ const REP_DETECTORS = {
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
-    const sY  = L ? kps[5][1]  : kps[6][1];
-    const hY  = L ? kps[11][1] : kps[12][1];
-    const anY = L ? kps[15][1] : kps[16][1];
-    const hipRatio = anY > sY ? (hY - sY) / (anY - sY) : 0.5;
-    const hipDropped = hipRatio > 0.52;
-    const phase = (a < 105 && hipDropped) ? "down" : a > 160 ? "up" : null;
-    return { angle: Math.round(a), phase, conf: L ? cL : cR };
+    return { angle: Math.round(a), phase: a < 105 ? "down" : a > 160 ? "up" : null, conf: L ? cL : cR };
   },
   sentadilla_una_pierna: (kps) => {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
@@ -431,13 +343,7 @@ const REP_DETECTORS = {
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
-    const sY  = L ? kps[5][1]  : kps[6][1];
-    const hY  = L ? kps[11][1] : kps[12][1];
-    const anY = L ? kps[15][1] : kps[16][1];
-    const hipRatio = anY > sY ? (hY - sY) / (anY - sY) : 0.5;
-    const hipDropped = hipRatio > 0.52;
-    const phase = (a < 95 && hipDropped) ? "down" : a > 155 ? "up" : null;
-    return { angle: Math.round(a), phase, conf: L ? cL : cR };
+    return { angle: Math.round(a), phase: a < 95 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
   },
   // ── TIRÓN: ángulo de codo (mejor que posición Y) ─────────────────────────
   // Codo doblado (<90°) = arriba; codo extendido (>155°) = abajo
@@ -485,9 +391,28 @@ const REP_DETECTORS = {
   },
 };
 
+// ─── MOVENET SCRIPTS — URLs y pre-carga ───────────────────────────────────
+
+const TF_URL = "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js";
+const PD_URL = "https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js";
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+// Llamar durante el countdown para que los scripts ya estén en caché cuando el usuario activa IA
+function preloadMoveNetScripts() {
+  return Promise.all([loadScript(TF_URL), loadScript(PD_URL)]).catch(() => {});
+}
+
 // ─── MOVENET HOOK — con smoothing, debounce y cooldown ────────────────────
 
-function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode = "user" }) {
+function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
   const videoRef     = useRef(null);
   const keypointsRef = useRef(null);
   const phaseRef     = useRef(null);
@@ -507,51 +432,57 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
     }
     let cancelled = false;
 
-    const loadScript = (src) => new Promise((res, rej) => {
-      if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
-      const s = document.createElement("script");
-      s.src = src; s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-
     const init = async () => {
       try {
-        onStatus("Cargando modelo...");
-        await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js");
-        if (cancelled) return;
-
-        // 🔧 MOBILE OPT 1: Forzar backend WebGL para usar GPU del celu
-        try { await window.tf.setBackend("webgl"); await window.tf.ready(); } catch(e) {}
-
-        onStatus("Iniciando cámara...");
-
-        // 🔧 MOBILE OPT 2: Resolución baja en celu (320x240 = 4x menos trabajo que 640x480)
+        // 🔧 SPEED OPT 1: resolución baja en mobile (4x menos trabajo)
         const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
         const camW = isMobile ? 320 : 640;
         const camH = isMobile ? 240 : 480;
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode, width:{ ideal:camW }, height:{ ideal:camH } }, audio:false
-        });
-        if (cancelled) { stream.getTracks().forEach(t=>t.stop()); return; }
+        onStatus("1/3 · Descargando IA...");
+
+        // 🔧 SPEED OPT 2: scripts + cámara en PARALELO (antes era serie, ahorramos ~2-4s en A5)
+        let stream;
+        try {
+          [, stream] = await Promise.all([
+            Promise.all([loadScript(TF_URL), loadScript(PD_URL)]),
+            navigator.mediaDevices.getUserMedia({
+              video: { facingMode:"user", width:{ ideal:camW }, height:{ ideal:camH } }, audio:false
+            })
+          ]);
+        } catch(e) {
+          // Si getUserMedia falla, al menos cargar los scripts
+          await Promise.all([loadScript(TF_URL), loadScript(PD_URL)]);
+          throw e;
+        }
+        if (cancelled) { stream?.getTracks().forEach(t=>t.stop()); return; }
 
         const video = document.createElement("video");
         video.srcObject = stream; video.playsInline = true; video.muted = true;
         await video.play();
         videoRef.current = video;
 
-        onStatus("Cargando MoveNet...");
+        onStatus("2/3 · Motor IA...");
+
+        // 🔧 SPEED OPT 3: fallback de backend — webgl → cpu (wasm no disponible siempre)
+        try {
+          await window.tf.setBackend("webgl");
+          await window.tf.ready();
+        } catch(e) {
+          try { await window.tf.setBackend("cpu"); await window.tf.ready(); } catch(e2) {}
+        }
+
+        onStatus("3/3 · Modelo pose...");
         const detector = await window.poseDetection.createDetector(
           window.poseDetection.SupportedModels.MoveNet,
           {
             modelType: window.poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
-            enableSmoothing: true,  // suavizado nativo del modelo
+            enableSmoothing: true,
           }
         );
         onStatus("ACTIVO");
 
-        // 🔧 MOBILE OPT 3: Frame skipping — procesa 1 de cada 2 frames en mobile
+        // 🔧 SPEED OPT 4: frame skipping en mobile (1 de cada 2 frames)
         let frameCount = 0;
         const SKIP = isMobile ? 2 : 1;
 
@@ -627,7 +558,7 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
 
 // ─── POSE VIEW — con overlay de ángulo y fase ─────────────────────────────
 
-function PoseView({ color, exerciseId, onRep, active, onStatusChange, onPhaseChange, facingMode = "user" }) {
+function PoseView({ color, exerciseId, onRep, active }) {
   const canvasRef    = useRef(null);
   const drawFrameRef = useRef(null);
   const [status, setStatus]   = useState("En espera...");
@@ -636,7 +567,6 @@ function PoseView({ color, exerciseId, onRep, active, onStatusChange, onPhaseCha
   const [liveConf,  setLiveConf]  = useState(0);
   const [repFlash,  setRepFlash]  = useState(false);
   const repFlashRef = useRef(false);
-  const lastEmittedPhaseRef = useRef(null); // evita emitir la misma fase dos veces
 
   const handleRep = () => {
     onRep();
@@ -649,20 +579,10 @@ function PoseView({ color, exerciseId, onRep, active, onStatusChange, onPhaseCha
     setLiveAngle(angle);
     setLivePhase(phase);
     setLiveConf(conf);
-    // Emitir cambio de fase al padre solo cuando cambia
-    if (phase && phase !== lastEmittedPhaseRef.current) {
-      lastEmittedPhaseRef.current = phase;
-      onPhaseChange?.(phase);
-    }
-  };
-
-  const handleStatus = (s) => {
-    setStatus(s);
-    onStatusChange?.(s);
   };
 
   const { videoRef, keypointsRef } = useMoveNet({
-    active, exerciseId, onRep: handleRep, onStatus: handleStatus, onAngle: handleAngle, facingMode
+    active, exerciseId, onRep: handleRep, onStatus: setStatus, onAngle: handleAngle
   });
 
   const CONNECTIONS = [
@@ -1508,9 +1428,6 @@ function RepCountApp() {
   const [goalReached, setGoalReached]    = useState(false);
   const [lastSession, setLastSession]    = useState(null);
   const [poseActive, setPoseActive]      = useState(false);
-  const [camFacing, setCamFacing]        = useState("user"); // "user" = frontal, "environment" = trasera
-  const [moveNetStatus, setMoveNetStatus] = useState("");
-  const [waitingForAI, setWaitingForAI]   = useState(false);
   const [editingField, setEditingField]  = useState(null);
   const [editingVal, setEditingVal]      = useState("");
   
@@ -1580,11 +1497,11 @@ function RepCountApp() {
   const startSession = () => {
     setReps(0); setActiveStep(0); setGoalReached(false); setSessionSaved(false);
     setCountdownLeft(5);
-    setMoveNetStatus(""); setWaitingForAI(false);
     setScreen("countdown");
   };
 
   const launchSession = () => {
+    setPoseActive(true); // IA arranca automáticamente
     if (mode === "libre") {
       setElapsed(0); setScreen("libre");
     } else if (seriesMode === "reps") {
@@ -1602,31 +1519,20 @@ function RepCountApp() {
     setSetRepsLog([]); setCurrentSet(1); setShowFireworks(false); setSessionSaved(false); setGoalReached(false); setOpenCat(null); setPoseActive(false);
   };
 
+  // Pre-carga MoveNet durante el countdown — así cuando el usuario activa 🤖 los scripts ya están listos
+  useEffect(() => {
+    if (screen === "countdown") preloadMoveNetScripts();
+  }, [screen]);
+
   // Cuenta regresiva antes de arrancar (5 seg)
   useEffect(() => {
     if (screen !== "countdown") return;
-    if (countdownLeft <= 0) {
-      // Si poseActive, esperar a que MoveNet esté ACTIVO antes de arrancar
-      if (poseActive && moveNetStatus !== "ACTIVO") {
-        setWaitingForAI(true);
-        return;
-      }
-      launchSession();
-      return;
-    }
+    if (countdownLeft <= 0) { launchSession(); return; }
     // Pitido en 3, 2, 1 — silbato largo en 0
     if (countdownLeft <= 3) playBeep(countdownLeft === 1 ? "whistle" : "warning");
     const t = setTimeout(() => setCountdownLeft(n => n - 1), 1000);
     return () => clearTimeout(t);
-  }, [screen, countdownLeft, poseActive, moveNetStatus]);
-
-  // Auto-lanzar cuando MoveNet esté listo y estábamos esperando
-  useEffect(() => {
-    if (waitingForAI && moveNetStatus === "ACTIVO") {
-      setWaitingForAI(false);
-      launchSession();
-    }
-  }, [moveNetStatus, waitingForAI]);
+  }, [screen, countdownLeft]);
 
   // Cronómetro libre — cuenta hacia arriba
   useEffect(() => {
@@ -1650,7 +1556,7 @@ function RepCountApp() {
               const nl = [...log, cr];
               setCurrentSet(cs => {
                 if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
-                else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); /* showMotivo(rand(MSG_SET)); */ }
+                else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); showMotivo(rand(MSG_SET)); }
                 return cs;
               });
               return nl;
@@ -1720,16 +1626,8 @@ function RepCountApp() {
     playBeep("victory");
   };
 
-  // Sincroniza el paso visual con la fase detectada por MoveNet
-  const handlePhaseChange = (phase) => {
-    if (!selected) return;
-    const map = PHASE_TO_STEP[selected.id];
-    if (!map) return; // burpees y ejercicios sin mapa → no tocar activeStep
-    const stepIdx = map[phase];
-    if (stepIdx !== undefined) setActiveStep(stepIdx);
-  };
-
-  const simulateRep = () => {    if (animating) return;
+  const simulateRep = () => {
+    if (animating) return;
     setAnimating(true);
     const steps = exerciseSteps[selected.id];
     let step = 0;
@@ -1758,7 +1656,7 @@ function RepCountApp() {
                 const nl = [...log, newReps];
                 setCurrentSet(cs => {
                   if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
-                  else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); /* showMotivo(rand(MSG_SET)); */ }
+                  else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); showMotivo(rand(MSG_SET)); }
                   return cs;
                 });
                 return nl;
@@ -1917,21 +1815,27 @@ function RepCountApp() {
             </div>
           )}
           {/* SELECTOR DE SUB-MODO (solo en series) */}
-          {mode === "series" && (
-            <div style={{ display:"flex", gap:"6px", marginBottom:"20px" }}>
-              {[
-                { id:"time",   label:"⏱ TIEMPO",  desc:"Duración por set" },
-                { id:"reps",   label:"🔢 REPS",    desc:"Meta de reps/set" },
-                { id:"tabata", label:"⚡ TABATA",  desc:"Trabajo / Descanso" },
-              ].map(m => (
-                <button key={m.id} onClick={() => setSeriesMode(m.id)}
-                  style={{ flex:1, padding:"10px 6px", background:seriesMode===m.id?`${C}18`:"rgba(255,255,255,0.03)", border:`1px solid ${seriesMode===m.id?C+"66":"rgba(255,255,255,0.07)"}`, borderRadius:"10px", cursor:"pointer", textAlign:"center", transition:"all 0.2s" }}>
-                  <div style={{ fontSize:"12px", letterSpacing:"1px", color:seriesMode===m.id?C:"#555", fontFamily:"'Bebas Neue',sans-serif" }}>{m.label}</div>
-                  <div style={{ fontFamily:"sans-serif", fontSize:"8px", color:seriesMode===m.id?"#777":"#333", marginTop:"2px" }}>{m.desc}</div>
-                </button>
-              ))}
-            </div>
-          )}
+          {mode === "series" && (() => {
+            const modos = [
+              { id:"time",   label:"TIEMPO",  icon:"⏱", desc:"Tiempo fijo por set" },
+              { id:"reps",   label:"REPS",    icon:"🔢", desc:"Meta de reps por set" },
+              { id:"tabata", label:"TABATA",  icon:"⚡", desc:"Trabajo / Descanso" },
+            ];
+            return (
+              <div style={{ display:"flex", gap:"6px", marginBottom:"20px" }}>
+                {modos.map(m => {
+                  const active = seriesMode === m.id;
+                  return (
+                    <button key={m.id} onClick={() => setSeriesMode(m.id)} style={{ flex:1, padding:"10px 6px", background:active?C:"rgba(255,255,255,0.04)", border:`1px solid ${active?C:"rgba(255,255,255,0.07)"}`, borderRadius:"10px", cursor:"pointer", textAlign:"center", transition:"all 0.2s", boxShadow:active?`0 0 14px ${C}44`:"none" }}>
+                      <div style={{ fontSize:"16px", marginBottom:"3px" }}>{m.icon}</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"13px", letterSpacing:"2px", color:active?"#000":C+"77" }}>{m.label}</div>
+                      <div style={{ fontFamily:"sans-serif", fontSize:"8px", color:active?"#00000088":"#444", marginTop:"2px", lineHeight:1.3 }}>{m.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* CONFIGURACIÓN DINÁMICA */}
           {mode === "series" && (() => {
@@ -2021,47 +1925,21 @@ function RepCountApp() {
             </>);
           })()}
 
-          {/* META DE REPS */}
-          <div style={{ marginBottom:"28px" }}>
-            <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#555", marginBottom:"4px" }}>META DE REPS</div>
-            <div style={{ fontFamily:"sans-serif", fontSize:"10px", color:"#444", marginBottom:"10px" }}>Dejá vacío si no querés meta</div>
-            <div style={{ position:"relative" }}>
-              <input
-                type="number"
-                min="1"
-                max="9999"
-                placeholder="Ej: 30"
-                value={repGoal === 0 ? "" : repGoal}
-                onChange={e => {
-                  const v = parseInt(e.target.value);
-                  setRepGoal(isNaN(v) || v < 1 ? 0 : v);
-                }}
-                style={{
-                  width:"100%",
-                  padding:"14px 48px 14px 16px",
-                  background:"rgba(255,255,255,0.05)",
-                  border:`1px solid ${repGoal > 0 ? C : "rgba(255,255,255,0.1)"}`,
-                  borderRadius:"10px",
-                  color: repGoal > 0 ? C : "#666",
-                  fontSize:"24px",
-                  fontFamily:"'Bebas Neue',sans-serif",
-                  letterSpacing:"2px",
-                  outline:"none",
-                  boxSizing:"border-box",
-                  boxShadow: repGoal > 0 ? `0 0 12px ${C}22` : "none",
-                  transition:"border 0.2s, box-shadow 0.2s",
-                  MozAppearance:"textfield",
-                }}
-              />
-              {repGoal > 0 && (
-                <button
-                  onClick={() => setRepGoal(0)}
-                  style={{ position:"absolute", right:"12px", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:"18px", lineHeight:1, padding:0 }}
-                >✕</button>
-              )}
-            </div>
-            <style>{`input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}`}</style>
+          {/* META DE REPS — fila compacta */}
+          <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"20px", padding:"10px 14px", background:"rgba(255,255,255,0.03)", border:`1px solid ${repGoal > 0 ? C+"44" : "rgba(255,255,255,0.07)"}`, borderRadius:"12px", transition:"border 0.2s" }}>
+            <div style={{ fontSize:"10px", letterSpacing:"3px", color:"#555", whiteSpace:"nowrap", fontFamily:"'Bebas Neue',sans-serif" }}>META</div>
+            <input
+              type="number" min="1" max="9999" placeholder="— sin meta"
+              value={repGoal === 0 ? "" : repGoal}
+              onChange={e => { const v = parseInt(e.target.value); setRepGoal(isNaN(v) || v < 1 ? 0 : v); }}
+              style={{ flex:1, background:"none", border:"none", outline:"none", color: repGoal > 0 ? C : "#444", fontSize:"22px", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:"2px", textAlign:"right", MozAppearance:"textfield" }}
+            />
+            {repGoal > 0 && (
+              <button onClick={() => setRepGoal(0)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:"16px", lineHeight:1, padding:0, flexShrink:0 }}>✕</button>
+            )}
+            {repGoal > 0 && <div style={{ fontSize:"10px", color:"#555", letterSpacing:"1px", fontFamily:"sans-serif", flexShrink:0 }}>reps</div>}
           </div>
+          <style>{`input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}`}</style>
 
           {mode === "series" && (() => {
             let secs = 0;
@@ -2085,65 +1963,37 @@ function RepCountApp() {
       {/* ── COUNTDOWN ── */}
       {screen === "countdown" && selected && (
         <div style={{ width:"100%", maxWidth:"420px", zIndex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"60vh", gap:"24px" }}>
-
-          {/* Pre-carga MoveNet en background si poseActive está on */}
-          {poseActive && (
-            <div style={{ position:"absolute", width:0, height:0, overflow:"hidden", opacity:0, pointerEvents:"none" }}>
-              <PoseView color={C} exerciseId={selected.id} onRep={() => {}} active={true} onStatusChange={setMoveNetStatus} />
-            </div>
-          )}
-
           <div style={{ fontSize:"13px", letterSpacing:"6px", color:"#555", textTransform:"uppercase" }}>{selected.name}</div>
-          <div style={{ fontSize:"14px", letterSpacing:"4px", color:"#444" }}>
-            {waitingForAI ? "CARGANDO IA..." : "PREPARATE"}
-          </div>
-
-          {/* Número grande — spinner si espera IA */}
+          <div style={{ fontSize:"14px", letterSpacing:"4px", color:"#444" }}>PREPARATE</div>
+          {/* Número grande */}
           <div style={{ position:"relative", width:"200px", height:"200px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            {/* Ring */}
             <svg width="200" height="200" style={{ position:"absolute", top:0, left:0, transform:"rotate(-90deg)" }}>
               <circle cx="100" cy="100" r="88" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10"/>
-              {waitingForAI ? (
-                // Spinner girando mientras espera
-                <circle cx="100" cy="100" r="88" fill="none" stroke={C} strokeWidth="10"
-                  strokeDasharray={`${2*Math.PI*88*0.25} ${2*Math.PI*88*0.75}`}
-                  strokeLinecap="round"
-                  style={{ animation:"spin 1s linear infinite", transformOrigin:"center" }}/>
-              ) : (
-                <circle cx="100" cy="100" r="88" fill="none" stroke={C} strokeWidth="10"
-                  strokeDasharray={`${2*Math.PI*88}`}
-                  strokeDashoffset={`${2*Math.PI*88 * (countdownLeft / 5)}`}
-                  strokeLinecap="round"
-                  style={{ transition:"stroke-dashoffset 0.9s linear" }}/>
-              )}
+              <circle cx="100" cy="100" r="88" fill="none" stroke={C} strokeWidth="10"
+                strokeDasharray={`${2*Math.PI*88}`}
+                strokeDashoffset={`${2*Math.PI*88 * (countdownLeft / 5)}`}
+                strokeLinecap="round"
+                style={{ transition:"stroke-dashoffset 0.9s linear" }}/>
             </svg>
-            {waitingForAI ? (
-              <div style={{ fontSize:"14px", letterSpacing:"3px", color:C, textAlign:"center", lineHeight:1.4 }}>
-                🤖<br/><span style={{ fontSize:"11px", color:"#555" }}>{moveNetStatus || "Iniciando..."}</span>
-              </div>
-            ) : (
-              <div style={{ fontSize:"96px", color:C, fontFamily:"'DSEG7 Classic',monospace", textShadow:`0 0 30px ${C}88`, lineHeight:1 }}>
-                {countdownLeft}
-              </div>
-            )}
+            <div style={{ fontSize:"96px", color:C, fontFamily:"'DSEG7 Classic',monospace", textShadow:`0 0 30px ${C}88`, lineHeight:1 }}>
+              {countdownLeft}
+            </div>
           </div>
-
           <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#444" }}>
-            {waitingForAI ? "ESPERANDO CÁMARA..." : countdownLeft > 1 ? "SEG PARA ARRANCAR" : "¡YA!"}
+            {countdownLeft > 1 ? "SEG PARA ARRANCAR" : "¡YA!"}
           </div>
-
           {/* Botón para saltar la cuenta */}
-          {!waitingForAI && (
-            <button onClick={launchSession}
-              style={{ marginTop:"8px", padding:"12px 32px", background:"transparent", border:`1px solid ${C}44`, borderRadius:"12px", color:"#555", fontSize:"12px", letterSpacing:"3px", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>
-              SALTAR
-            </button>
-          )}
+          <button onClick={launchSession}
+            style={{ marginTop:"8px", padding:"12px 32px", background:"transparent", border:`1px solid ${C}44`, borderRadius:"12px", color:"#555", fontSize:"12px", letterSpacing:"3px", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>
+            SALTAR
+          </button>
         </div>
       )}
 
       {/* ── COUNTING ── */}
       {screen === "counting" && selected && (
-        <div style={{ width:"100%", maxWidth:"420px", zIndex:1 }}>
+        <div style={{ width:"100%", maxWidth:"420px", zIndex:1, textAlign:"center" }}>
 
           {/* PR BADGE */}
           {prBroken && (
@@ -2153,126 +2003,93 @@ function RepCountApp() {
             </div>
           )}
 
-          {/* ── HEADER: barra de sets ── */}
-          <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"14px" }}>
-            <div style={{ fontSize:"11px", letterSpacing:"2px", color:C, whiteSpace:"nowrap" }}>
-              {seriesMode === "tabata" ? `RONDA ${currentSet}/${totalSets}` : `SET ${currentSet}/${totalSets}`}
+          {/* Header: set progress */}
+          <div style={{ display:"flex", gap:"6px", justifyContent:"center", marginBottom:"6px" }}>
+            {Array.from({ length:totalSets }, (_,i) => (
+              <div key={i} style={{ flex:1, maxWidth:i===currentSet-1?"28px":"12px", height:"5px", borderRadius:"3px", background:i<currentSet-1?C+"88":i===currentSet-1?C:"rgba(255,255,255,0.1)", boxShadow:i===currentSet-1?`0 0 8px ${C}`:"none", transition:"all 0.3s" }} />
+            ))}
+          </div>
+          <div style={{ fontSize:"10px", letterSpacing:"3px", color:C+"99", marginBottom:"16px" }}>
+            {seriesMode === "tabata" ? `RONDA ${currentSet} / ${totalSets}` : `SET ${currentSet} / ${totalSets}`}
+          </div>
+
+          {/* BIG RING */}
+          <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 16px" }}>
+            <svg width="240" height="240" style={{ transform:"rotate(-90deg)", position:"absolute", top:0, left:0 }}>
+              <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
+              <circle cx="120" cy="120" r="108" fill="none" stroke={C} strokeWidth="8" strokeLinecap="round"
+                strokeDasharray={`${2*Math.PI*108}`} strokeDashoffset={`${2*Math.PI*108*(1-pct/100)}`}
+                style={{ transition:seriesMode==="reps"?"stroke-dashoffset 0.3s ease":"stroke-dashoffset 1s linear", filter:`drop-shadow(0 0 10px ${C})` }}/>
+            </svg>
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center", width:"180px" }}>
+              <div style={{ fontSize:"88px", lineHeight:1, color:goalReached?"#FFD700":C, textShadow:`0 0 40px ${goalReached?"#FFD700":C}88`, transition:"color 0.3s", fontVariantNumeric:"tabular-nums" }}>{reps}</div>
+              <div style={{ fontSize:"10px", letterSpacing:"5px", color:"#444", marginTop:"2px" }}>
+                {seriesMode === "reps" ? `/ ${repsPerSet}` : "REPS"}
+              </div>
+              {seriesMode !== "reps" && (
+                <div style={{ fontSize:"22px", letterSpacing:"2px", color:timeLeft<=10?"#FF4D4D":"#888", marginTop:"6px", fontVariantNumeric:"tabular-nums", transition:"color 0.3s" }}>{fmt(timeLeft)}</div>
+              )}
             </div>
-            <div style={{ flex:1, display:"flex", gap:"4px" }}>
-              {Array.from({ length:totalSets }, (_,i) => (
-                <div key={i} style={{ flex:1, height:"4px", borderRadius:"2px",
-                  background:i<currentSet-1?C+"99":i===currentSet-1?C:"rgba(255,255,255,0.08)",
-                  boxShadow:i===currentSet-1?`0 0 6px ${C}`:"none", transition:"all 0.3s" }} />
+          </div>
+
+          {/* Historial de sets anteriores */}
+          {setRepsLog.length > 0 && (
+            <div style={{ display:"flex", gap:"6px", justifyContent:"center", marginBottom:"14px" }}>
+              {setRepsLog.map((r, i) => (
+                <div key={i} style={{ padding:"5px 10px", borderRadius:"8px", background:`${C}15`, border:`1px solid ${C}33`, textAlign:"center" }}>
+                  <div style={{ fontSize:"16px", color:C, lineHeight:1 }}>{r}</div>
+                  <div style={{ fontSize:"8px", color:"#444", fontFamily:"sans-serif", marginTop:"1px" }}>S{i+1}</div>
+                </div>
               ))}
             </div>
-            {/* Sets anteriores compactos */}
-            {setRepsLog.length > 0 && (
-              <div style={{ display:"flex", gap:"4px" }}>
-                {setRepsLog.map((r,i) => (
-                  <div key={i} style={{ fontSize:"11px", color:C+"99", background:`${C}15`, border:`1px solid ${C}22`, borderRadius:"6px", padding:"1px 6px", fontVariantNumeric:"tabular-nums" }}>{r}</div>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* ── CÁMARA / POSE ── */}
-          <div style={{ marginBottom:"14px", borderRadius:"16px", overflow:"hidden" }}>
-            {poseActive
-              ? <PoseView key={`pose-counting-${camFacing}`} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
-              : <CameraView color={C} animating={animating} activeStep={activeStep} exerciseId={selected.id} />
-            }
-          </div>
-
-          {/* ── REPS (protagonista) ── */}
-          <div style={{ textAlign:"center", marginBottom:"12px" }}>
-            <div style={{ fontSize:"96px", lineHeight:1, color:goalReached?"#FFD700":C,
-              textShadow:`0 0 40px ${goalReached?"#FFD700":C}66`,
-              transition:"color 0.3s", fontVariantNumeric:"tabular-nums" }}>
-              {reps}
-            </div>
-            <div style={{ fontSize:"10px", letterSpacing:"5px", color:"#444", marginTop:"2px" }}>
-              {seriesMode === "reps" ? `/ ${repsPerSet} REPS` : "REPS"}
-            </div>
-            {/* Barra de meta */}
-            {repGoal > 0 && (
-              <div style={{ margin:"8px 32px 0" }}>
-                <div style={{ height:"3px", borderRadius:"2px", background:"rgba(255,255,255,0.08)", overflow:"hidden" }}>
-                  <div style={{ height:"100%", borderRadius:"2px", width:`${Math.min((reps/repGoal)*100,100)}%`, background:goalReached?"#FFD700":C, transition:"width 0.3s ease" }}/>
-                </div>
-                <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:goalReached?"#FFD700":"#444", marginTop:"3px" }}>
-                  {goalReached ? "🏆 ¡META!" : `META ${reps}/${repGoal}`}
-                </div>
+          {/* Meta progress */}
+          {repGoal > 0 && seriesMode !== "reps" && (
+            <div style={{ padding:"0 32px", marginBottom:"14px" }}>
+              <div style={{ height:"3px", borderRadius:"2px", background:"rgba(255,255,255,0.08)", overflow:"hidden" }}>
+                <div style={{ height:"100%", borderRadius:"2px", width:`${Math.min((reps/repGoal)*100,100)}%`, background:goalReached?"#FFD700":C, transition:"width 0.3s ease" }}/>
               </div>
-            )}
-          </div>
-
-          {/* ── TIMER + FASE en la misma fila ── */}
-          {seriesMode !== "reps" && (
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"12px", marginBottom:"14px",
-              background:"rgba(255,255,255,0.03)", border:`1px solid rgba(255,255,255,0.07)`,
-              borderRadius:"12px", padding:"10px 16px" }}>
-              {/* Timer */}
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontSize:"32px", lineHeight:1, color:timeLeft<=10?"#FF4D4D":"#fff",
-                  fontVariantNumeric:"tabular-nums", transition:"color 0.3s",
-                  fontFamily:"'DSEG7 Classic',monospace", letterSpacing:"2px" }}>
-                  {fmt(timeLeft)}
-                </div>
-                <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#444", marginTop:"2px" }}>TIEMPO</div>
-              </div>
-              {/* Separador */}
-              <div style={{ width:"1px", height:"32px", background:"rgba(255,255,255,0.08)" }} />
-              {/* Fase detectada */}
-              <div style={{ textAlign:"center" }}>
-                {(() => {
-                  const steps = exerciseSteps[selected.id] || [];
-                  const stepLabel = steps[activeStep] || "—";
-                  return (
-                    <>
-                      <div style={{ fontSize:"18px", letterSpacing:"2px", color:C }}>
-                        {stepLabel.toUpperCase()}
-                      </div>
-                      <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#444", marginTop:"2px" }}>FASE</div>
-                    </>
-                  );
-                })()}
+              <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:goalReached?"#FFD700":"#555", marginTop:"3px" }}>
+                {goalReached ? "🏆 ¡META!" : `${reps} / ${repGoal}`}
               </div>
             </div>
           )}
 
-          {/* ── BOTONES ── */}
+          {/* Pasos del movimiento */}
+          {(() => { const steps = exerciseSteps[selected.id] || []; return steps.length > 0 && (
+            <div style={{ display:"flex", gap:"6px", justifyContent:"center", marginBottom:"16px" }}>
+              {steps.map((s, i) => (
+                <div key={i} style={{ padding:"4px 10px", borderRadius:"20px", background:i===activeStep?`${C}22`:"rgba(255,255,255,0.03)", border:`1px solid ${i===activeStep?C+"66":"rgba(255,255,255,0.06)"}`, transition:"all 0.2s" }}>
+                  <div style={{ fontSize:"9px", letterSpacing:"1px", color:i===activeStep?C:"#444", fontFamily:"sans-serif" }}>{s}</div>
+                </div>
+              ))}
+            </div>
+          ); })()}
+
+          {/* POSE VIEW */}
+          {poseActive && (
+            <div style={{ marginBottom:"14px" }}>
+              <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} />
+            </div>
+          )}
+
+          {/* MANUAL + POSE TOGGLE + ABANDONAR */}
           <div style={{ display:"flex", gap:"8px", marginBottom:"8px" }}>
-            <button onClick={simulateRep}
-              style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}33`,
-                borderRadius:"12px", fontSize:"15px", letterSpacing:"3px", color:C+"99",
-                cursor:animating?"not-allowed":"pointer", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>
+            <button onClick={simulateRep} style={{ flex:1, padding:"12px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}33`, borderRadius:"12px", fontSize:"15px", letterSpacing:"3px", color:C+"99", cursor:animating?"not-allowed":"pointer", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>
               {animating ? "..." : "+ MANUAL"}
             </button>
-            <button onClick={() => setPoseActive(v => !v)}
-              style={{ padding:"14px 16px", background:poseActive?`${C}22`:"rgba(255,255,255,0.04)",
-                border:`1px solid ${poseActive?C:"rgba(255,255,255,0.1)"}`,
-                borderRadius:"12px", color:poseActive?C:"#555", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }}
-              title="IA Pose Detection">
+            <button onClick={() => setPoseActive(v => !v)} style={{ padding:"12px 14px", background:poseActive?`${C}22`:"rgba(255,255,255,0.04)", border:`1px solid ${poseActive?C:"rgba(255,255,255,0.1)"}`, borderRadius:"12px", color:poseActive?C:"#555", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }} title="IA Pose Detection">
               🤖
             </button>
-            {poseActive && (
-              <button
-                onClick={() => setCamFacing(f => f === "user" ? "environment" : "user")}
-                style={{ padding:"14px 16px", background:"rgba(255,255,255,0.04)",
-                  border:"1px solid rgba(255,255,255,0.1)",
-                  borderRadius:"12px", color:"#888", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }}
-                title={camFacing === "user" ? "Cambiar a cámara trasera" : "Cambiar a cámara frontal"}>
-                {camFacing === "user" ? "🤳" : "📷"}
-              </button>
-            )}
           </div>
-          <button onClick={resetApp} style={{ background:"none", border:"none", color:"#2a2a2a", cursor:"pointer", fontSize:"11px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", width:"100%", padding:"6px" }}>ABANDONAR</button>
+          <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>ABANDONAR</button>
         </div>
       )}
 
       {/* ── LIBRE ── */}
       {screen === "libre" && selected && (
-        <div style={{ width:"100%", maxWidth:"420px", zIndex:1 }}>
+        <div style={{ width:"100%", maxWidth:"420px", zIndex:1, textAlign:"center" }}>
 
           {/* PR BADGE */}
           {prBroken && (
@@ -2282,90 +2099,68 @@ function RepCountApp() {
             </div>
           )}
 
-          {/* ── HEADER ── */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"14px" }}>
-            <div style={{ fontSize:"11px", letterSpacing:"3px", color:"#555" }}>⏱ LIBRE</div>
-            <div style={{ fontSize:"28px", lineHeight:1, color:"#fff", fontVariantNumeric:"tabular-nums",
-              fontFamily:"'DSEG7 Classic',monospace", letterSpacing:"2px" }}>
-              {fmt(elapsed)}
+          <div style={{ fontSize:"9px", letterSpacing:"6px", color:"#555", marginBottom:"16px" }}>⏱ MODO LIBRE</div>
+
+          {/* BIG RING: elapsed spinner + reps inside */}
+          <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 20px" }}>
+            <svg width="240" height="240" style={{ transform:"rotate(-90deg)", position:"absolute", top:0, left:0 }}>
+              <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
+              {/* pulsing arc that grows with time — 1 rev each 3 min */}
+              <circle cx="120" cy="120" r="108" fill="none" stroke={goalReached?"#FFD700":C} strokeWidth="8" strokeLinecap="round"
+                strokeDasharray={`${2*Math.PI*108}`}
+                strokeDashoffset={`${2*Math.PI*108*(1 - (elapsed % 180)/180)}`}
+                style={{ transition:"stroke-dashoffset 1s linear", filter:`drop-shadow(0 0 10px ${goalReached?"#FFD700":C})` }}/>
+            </svg>
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center", width:"180px" }}>
+              <div style={{ fontSize:"88px", lineHeight:1, color:goalReached?"#FFD700":C, textShadow:`0 0 40px ${goalReached?"#FFD700":C}88`, transition:"color 0.3s", fontVariantNumeric:"tabular-nums" }}>{reps}</div>
+              <div style={{ fontSize:"10px", letterSpacing:"5px", color:"#444", marginTop:"2px" }}>REPS</div>
+              <div style={{ fontSize:"22px", letterSpacing:"2px", color:"#888", marginTop:"6px", fontVariantNumeric:"tabular-nums" }}>{fmt(elapsed)}</div>
             </div>
           </div>
 
-          {/* ── CÁMARA / POSE ── */}
-          <div style={{ marginBottom:"14px", borderRadius:"16px", overflow:"hidden" }}>
-            {poseActive
-              ? <PoseView key={`pose-libre-${camFacing}`} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
-              : <CameraView color={C} animating={animating} activeStep={activeStep} exerciseId={selected.id} />
-            }
-          </div>
-
-          {/* ── REPS (protagonista) ── */}
-          <div style={{ textAlign:"center", marginBottom:"14px" }}>
-            <div style={{ fontSize:"96px", lineHeight:1, color:goalReached?"#FFD700":C,
-              textShadow:`0 0 40px ${goalReached?"#FFD700":C}66`,
-              transition:"color 0.3s", fontVariantNumeric:"tabular-nums" }}>
-              {reps}
+          {/* Meta */}
+          {repGoal > 0 && (
+            <div style={{ padding:"0 32px", marginBottom:"16px" }}>
+              <div style={{ height:"3px", borderRadius:"2px", background:"rgba(255,255,255,0.08)", overflow:"hidden" }}>
+                <div style={{ height:"100%", borderRadius:"2px", width:`${Math.min((reps/repGoal)*100,100)}%`, background:goalReached?"#FFD700":C, transition:"width 0.3s ease" }}/>
+              </div>
+              <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:goalReached?"#FFD700":"#555", marginTop:"3px" }}>
+                {goalReached ? "🏆 ¡META!" : `${reps} / ${repGoal}`}
+              </div>
             </div>
-            <div style={{ fontSize:"10px", letterSpacing:"5px", color:"#444", marginTop:"2px" }}>REPS</div>
-            {repGoal > 0 && (
-              <div style={{ margin:"8px 32px 0" }}>
-                <div style={{ height:"3px", borderRadius:"2px", background:"rgba(255,255,255,0.08)", overflow:"hidden" }}>
-                  <div style={{ height:"100%", borderRadius:"2px", width:`${Math.min((reps/repGoal)*100,100)}%`, background:goalReached?"#FFD700":C, transition:"width 0.3s ease" }}/>
-                </div>
-                <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:goalReached?"#FFD700":"#444", marginTop:"3px" }}>
-                  {goalReached ? "🏆 ¡META!" : `META ${reps}/${repGoal}`}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* ── FASE detectada ── */}
-          {(() => {
-            const steps = exerciseSteps[selected.id] || [];
-            const stepLabel = steps[activeStep];
-            return stepLabel ? (
-              <div style={{ textAlign:"center", marginBottom:"14px",
-                background:"rgba(255,255,255,0.03)", border:`1px solid rgba(255,255,255,0.07)`,
-                borderRadius:"12px", padding:"10px" }}>
-                <div style={{ fontSize:"18px", letterSpacing:"2px", color:C }}>{stepLabel.toUpperCase()}</div>
-                <div style={{ fontSize:"8px", letterSpacing:"3px", color:"#444", marginTop:"2px" }}>FASE</div>
-              </div>
-            ) : null;
-          })()}
+          {/* Pasos */}
+          {(() => { const steps = exerciseSteps[selected.id] || []; return steps.length > 0 && (
+            <div style={{ display:"flex", gap:"6px", justifyContent:"center", marginBottom:"18px" }}>
+              {steps.map((s, i) => (
+                <div key={i} style={{ padding:"4px 10px", borderRadius:"20px", background:i===activeStep?`${C}22`:"rgba(255,255,255,0.03)", border:`1px solid ${i===activeStep?C+"66":"rgba(255,255,255,0.06)"}`, transition:"all 0.2s" }}>
+                  <div style={{ fontSize:"9px", letterSpacing:"1px", color:i===activeStep?C:"#444", fontFamily:"sans-serif" }}>{s}</div>
+                </div>
+              ))}
+            </div>
+          ); })()}
 
-          {/* ── BOTONES ── */}
+          {/* POSE VIEW */}
+          {poseActive && (
+            <div style={{ marginBottom:"14px" }}>
+              <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} />
+            </div>
+          )}
+
+          {/* MANUAL + TERMINAR + ABANDONAR */}
           <div style={{ display:"flex", gap:"8px", marginBottom:"8px" }}>
-            <button onClick={simulateRep}
-              style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}33`,
-                borderRadius:"12px", fontSize:"15px", letterSpacing:"3px", color:C+"99",
-                cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>
+            <button onClick={simulateRep} style={{ flex:1, padding:"12px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}33`, borderRadius:"12px", fontSize:"15px", letterSpacing:"3px", color:C+"99", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>
               + MANUAL
             </button>
-            <button onClick={() => setPoseActive(v => !v)}
-              style={{ padding:"14px 16px", background:poseActive?`${C}22`:"rgba(255,255,255,0.04)",
-                border:`1px solid ${poseActive?C:"rgba(255,255,255,0.1)"}`,
-                borderRadius:"12px", color:poseActive?C:"#555", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }}
-              title="IA Pose Detection">
+            <button onClick={() => setPoseActive(v => !v)} style={{ padding:"12px 14px", background:poseActive?`${C}22`:"rgba(255,255,255,0.04)", border:`1px solid ${poseActive?C:"rgba(255,255,255,0.1)"}`, borderRadius:"12px", color:poseActive?C:"#555", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }} title="IA Pose Detection">
               🤖
             </button>
-            {poseActive && (
-              <button
-                onClick={() => setCamFacing(f => f === "user" ? "environment" : "user")}
-                style={{ padding:"14px 16px", background:"rgba(255,255,255,0.04)",
-                  border:"1px solid rgba(255,255,255,0.1)",
-                  borderRadius:"12px", color:"#888", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }}
-                title={camFacing === "user" ? "Cambiar a cámara trasera" : "Cambiar a cámara frontal"}>
-                {camFacing === "user" ? "🤳" : "📷"}
-              </button>
-            )}
           </div>
-          <button onClick={finishLibre}
-            style={{ width:"100%", padding:"14px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}55`,
-              borderRadius:"12px", fontSize:"15px", letterSpacing:"4px", color:C,
-              cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"8px" }}>
+          <button onClick={finishLibre} style={{ width:"100%", padding:"14px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}55`, borderRadius:"12px", fontSize:"15px", letterSpacing:"4px", color:C, cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"8px" }}>
             ⏹ TERMINAR SESIÓN
           </button>
-          <button onClick={resetApp} style={{ background:"none", border:"none", color:"#2a2a2a", cursor:"pointer", fontSize:"11px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", width:"100%", padding:"6px" }}>ABANDONAR</button>
+          <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>ABANDONAR</button>
         </div>
       )}
       {screen === "rest" && selected && (
