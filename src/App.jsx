@@ -2134,7 +2134,7 @@ function RepCountApp() {
           {/* ── CÁMARA / POSE ── */}
           <div style={{ marginBottom:"14px", borderRadius:"16px", overflow:"hidden" }}>
             {poseActive
-              ? <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
+              ? <PoseView key={`pose-counting-${camFacing}`} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
               : <CameraView color={C} animating={animating} activeStep={activeStep} exerciseId={selected.id} />
             }
           </div>
@@ -2250,7 +2250,7 @@ function RepCountApp() {
           {/* ── CÁMARA / POSE ── */}
           <div style={{ marginBottom:"14px", borderRadius:"16px", overflow:"hidden" }}>
             {poseActive
-              ? <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
+              ? <PoseView key={`pose-libre-${camFacing}`} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
               : <CameraView color={C} animating={animating} activeStep={activeStep} exerciseId={selected.id} />
             }
           </div>
