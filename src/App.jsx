@@ -327,20 +327,64 @@ const MIN_CONF = 0.35;
 const REP_DETECTORS = {
   // ── EMPUJE: ángulo de codo, mejor lado ──────────────────────────────────
   flexiones: (kps) => {
-    const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
-    const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
+    // Necesitamos hombro, muñeca, cadera y tobillo para verificar plancha
+    const cL = Math.min(kps[5][2], kps[9][2], kps[11][2], kps[15][2]);
+    const cR = Math.min(kps[6][2], kps[10][2], kps[12][2], kps[16][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
-    const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
-    return { angle: Math.round(a), phase: a < 90 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
+
+    const sh = L ? kps[5]  : kps[6];   // hombro
+    const wr = L ? kps[9]  : kps[10];  // muñeca (fija en el suelo)
+    const hp = L ? kps[11] : kps[12];  // cadera
+    const an = L ? kps[15] : kps[16];  // tobillo
+
+    // ── VERIFICAR PLANCHA ──────────────────────────────────────────────────
+    // En plancha el cuerpo es horizontal: span X (hombro→tobillo) >> span Y
+    // Parado: span Y >> span X
+    const spanY = Math.abs(an[1] - sh[1]);
+    const spanX = Math.abs(an[0] - sh[0]);
+    const isPlank = spanY < spanX * 0.65; // cuerpo más horizontal que vertical
+    if (!isPlank) return { angle: null, phase: null, conf: 0 };
+
+    // ── MOVIMIENTO: distancia vertical hombro → muñeca ────────────────────
+    // La muñeca está fija en el suelo (Y grande en coords imagen)
+    // El hombro sube (UP) y baja (DOWN) relativo a la muñeca
+    const dropY = wr[1] - sh[1]; // positivo = hombro por encima de muñeca
+    const scale = Math.max(spanX, 50); // escala = ancho del cuerpo
+    const dropRatio = dropY / scale;
+
+    // DOWN: hombro cerca del suelo (dropRatio pequeño)
+    // UP:   hombro lejos del suelo (dropRatio grande)
+    const phase = dropRatio < 0.18 ? "down" : dropRatio > 0.45 ? "up" : null;
+
+    // Ángulo de codo — solo para el overlay informativo
+    const a = calcAngle(sh, L ? kps[7] : kps[8], wr);
+    return { angle: Math.round(a), phase, conf: L ? cL : cR };
   },
   flexiones_diamante: (kps) => {
-    const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
-    const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
+    const cL = Math.min(kps[5][2], kps[9][2], kps[11][2], kps[15][2]);
+    const cR = Math.min(kps[6][2], kps[10][2], kps[12][2], kps[16][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
-    const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
-    return { angle: Math.round(a), phase: a < 85 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
+
+    const sh = L ? kps[5]  : kps[6];
+    const wr = L ? kps[9]  : kps[10];
+    const an = L ? kps[15] : kps[16];
+
+    const spanY = Math.abs(an[1] - sh[1]);
+    const spanX = Math.abs(an[0] - sh[0]);
+    const isPlank = spanY < spanX * 0.65;
+    if (!isPlank) return { angle: null, phase: null, conf: 0 };
+
+    const dropY = wr[1] - sh[1];
+    const scale = Math.max(spanX, 50);
+    const dropRatio = dropY / scale;
+
+    // Diamante requiere bajar un poco más → umbral down más estricto
+    const phase = dropRatio < 0.14 ? "down" : dropRatio > 0.45 ? "up" : null;
+
+    const a = calcAngle(sh, L ? kps[7] : kps[8], wr);
+    return { angle: Math.round(a), phase, conf: L ? cL : cR };
   },
   dips: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
