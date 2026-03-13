@@ -443,7 +443,7 @@ const REP_DETECTORS = {
 
 // ─── MOVENET HOOK — con smoothing, debounce y cooldown ────────────────────
 
-function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
+function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode = "user" }) {
   const videoRef     = useRef(null);
   const keypointsRef = useRef(null);
   const phaseRef     = useRef(null);
@@ -488,7 +488,7 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
         const camH = isMobile ? 240 : 480;
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode:"environment", width:{ ideal:camW }, height:{ ideal:camH } }, audio:false
+          video: { facingMode, width:{ ideal:camW }, height:{ ideal:camH } }, audio:false
         });
         if (cancelled) { stream.getTracks().forEach(t=>t.stop()); return; }
 
@@ -583,7 +583,7 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
 
 // ─── POSE VIEW — con overlay de ángulo y fase ─────────────────────────────
 
-function PoseView({ color, exerciseId, onRep, active, onStatusChange, onPhaseChange }) {
+function PoseView({ color, exerciseId, onRep, active, onStatusChange, onPhaseChange, facingMode = "user" }) {
   const canvasRef    = useRef(null);
   const drawFrameRef = useRef(null);
   const [status, setStatus]   = useState("En espera...");
@@ -618,7 +618,7 @@ function PoseView({ color, exerciseId, onRep, active, onStatusChange, onPhaseCha
   };
 
   const { videoRef, keypointsRef } = useMoveNet({
-    active, exerciseId, onRep: handleRep, onStatus: handleStatus, onAngle: handleAngle
+    active, exerciseId, onRep: handleRep, onStatus: handleStatus, onAngle: handleAngle, facingMode
   });
 
   const CONNECTIONS = [
@@ -1464,6 +1464,7 @@ function RepCountApp() {
   const [goalReached, setGoalReached]    = useState(false);
   const [lastSession, setLastSession]    = useState(null);
   const [poseActive, setPoseActive]      = useState(false);
+  const [camFacing, setCamFacing]        = useState("user"); // "user" = frontal, "environment" = trasera
   const [moveNetStatus, setMoveNetStatus] = useState("");
   const [waitingForAI, setWaitingForAI]   = useState(false);
   const [editingField, setEditingField]  = useState(null);
@@ -2133,7 +2134,7 @@ function RepCountApp() {
           {/* ── CÁMARA / POSE ── */}
           <div style={{ marginBottom:"14px", borderRadius:"16px", overflow:"hidden" }}>
             {poseActive
-              ? <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} />
+              ? <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
               : <CameraView color={C} animating={animating} activeStep={activeStep} exerciseId={selected.id} />
             }
           </div>
@@ -2210,6 +2211,16 @@ function RepCountApp() {
               title="IA Pose Detection">
               🤖
             </button>
+            {poseActive && (
+              <button
+                onClick={() => setCamFacing(f => f === "user" ? "environment" : "user")}
+                style={{ padding:"14px 16px", background:"rgba(255,255,255,0.04)",
+                  border:"1px solid rgba(255,255,255,0.1)",
+                  borderRadius:"12px", color:"#888", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }}
+                title={camFacing === "user" ? "Cambiar a cámara trasera" : "Cambiar a cámara frontal"}>
+                {camFacing === "user" ? "🤳" : "📷"}
+              </button>
+            )}
           </div>
           <button onClick={resetApp} style={{ background:"none", border:"none", color:"#2a2a2a", cursor:"pointer", fontSize:"11px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", width:"100%", padding:"6px" }}>ABANDONAR</button>
         </div>
@@ -2239,7 +2250,7 @@ function RepCountApp() {
           {/* ── CÁMARA / POSE ── */}
           <div style={{ marginBottom:"14px", borderRadius:"16px", overflow:"hidden" }}>
             {poseActive
-              ? <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} />
+              ? <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} onStatusChange={setMoveNetStatus} onPhaseChange={handlePhaseChange} facingMode={camFacing} />
               : <CameraView color={C} animating={animating} activeStep={activeStep} exerciseId={selected.id} />
             }
           </div>
@@ -2293,6 +2304,16 @@ function RepCountApp() {
               title="IA Pose Detection">
               🤖
             </button>
+            {poseActive && (
+              <button
+                onClick={() => setCamFacing(f => f === "user" ? "environment" : "user")}
+                style={{ padding:"14px 16px", background:"rgba(255,255,255,0.04)",
+                  border:"1px solid rgba(255,255,255,0.1)",
+                  borderRadius:"12px", color:"#888", cursor:"pointer", fontSize:"18px", transition:"all 0.2s" }}
+                title={camFacing === "user" ? "Cambiar a cámara trasera" : "Cambiar a cámara frontal"}>
+                {camFacing === "user" ? "🤳" : "📷"}
+              </button>
+            )}
           </div>
           <button onClick={finishLibre}
             style={{ width:"100%", padding:"14px", background:"rgba(255,255,255,0.04)", border:`1px solid ${C}55`,
