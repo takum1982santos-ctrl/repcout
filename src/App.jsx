@@ -407,12 +407,12 @@ function loadScript(src) {
 
 // Llamar durante el countdown para que los scripts ya estén en caché cuando el usuario activa IA
 function preloadMoveNetScripts() {
-  return Promise.all([loadScript(TF_URL), loadScript(PD_URL)]).catch(() => {});
+  return loadScript(TF_URL).then(() => loadScript(PD_URL)).catch(() => {});
 }
 
 // ─── MOVENET HOOK — con smoothing, debounce y cooldown ────────────────────
 
-function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
+function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode = "user" }) {
   const videoRef     = useRef(null);
   const keypointsRef = useRef(null);
   const phaseRef     = useRef(null);
@@ -441,18 +441,19 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
 
         onStatus("1/3 · Descargando IA...");
 
-        // 🔧 SPEED OPT 2: scripts + cámara en PARALELO (antes era serie, ahorramos ~2-4s en A5)
+        // 🔧 SPEED OPT 2: tf.js + cámara en paralelo; pose-detection después (depende de tf.js)
         let stream;
         try {
           [, stream] = await Promise.all([
-            Promise.all([loadScript(TF_URL), loadScript(PD_URL)]),
+            loadScript(TF_URL),
             navigator.mediaDevices.getUserMedia({
-              video: { facingMode:"user", width:{ ideal:camW }, height:{ ideal:camH } }, audio:false
+              video: { facingMode: facingMode, width:{ ideal:camW }, height:{ ideal:camH } }, audio:false
             })
           ]);
+          await loadScript(PD_URL); // pose-detection necesita tf.js listo primero
         } catch(e) {
-          // Si getUserMedia falla, al menos cargar los scripts
-          await Promise.all([loadScript(TF_URL), loadScript(PD_URL)]);
+          await loadScript(TF_URL).catch(()=>{});
+          await loadScript(PD_URL).catch(()=>{});
           throw e;
         }
         if (cancelled) { stream?.getTracks().forEach(t=>t.stop()); return; }
@@ -558,7 +559,7 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle }) {
 
 // ─── POSE VIEW — con overlay de ángulo y fase ─────────────────────────────
 
-function PoseView({ color, exerciseId, onRep, active }) {
+function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }) {
   const canvasRef    = useRef(null);
   const drawFrameRef = useRef(null);
   const [status, setStatus]   = useState("En espera...");
@@ -582,7 +583,7 @@ function PoseView({ color, exerciseId, onRep, active }) {
   };
 
   const { videoRef, keypointsRef } = useMoveNet({
-    active, exerciseId, onRep: handleRep, onStatus: setStatus, onAngle: handleAngle
+    active, exerciseId, onRep: handleRep, onStatus: setStatus, onAngle: handleAngle, facingMode
   });
 
   const CONNECTIONS = [
@@ -720,6 +721,14 @@ function PoseView({ color, exerciseId, onRep, active }) {
           border:`2px solid ${repFlash ? color : color+"33"}`,
           boxShadow: repFlash ? `0 0 20px ${color}55` : "none",
           transition:"border-color 0.1s, box-shadow 0.1s" }} />
+
+      {/* Botón rotar cámara */}
+      {onFlipCamera && (
+        <button onClick={onFlipCamera} style={{ position:"absolute", top:"8px", right:"8px", background:"rgba(0,0,0,0.6)", border:`1px solid ${color}44`, borderRadius:"8px", color:"#fff", fontSize:"16px", padding:"4px 8px", cursor:"pointer", lineHeight:1 }}
+          title="Cambiar cámara">
+          {facingMode === "user" ? "📷" : "🤳"}
+        </button>
+      )}
 
       {/* Status bar */}
       <div style={{ position:"absolute", bottom:"8px", left:"50%", transform:"translateX(-50%)",
@@ -1428,6 +1437,8 @@ function RepCountApp() {
   const [goalReached, setGoalReached]    = useState(false);
   const [lastSession, setLastSession]    = useState(null);
   const [poseActive, setPoseActive]      = useState(false);
+  const [facingMode, setFacingMode]      = useState("user");
+  const [cameraKey, setCameraKey]        = useState(0); // fuerza remount al cambiar cámara
   const [editingField, setEditingField]  = useState(null);
   const [editingVal, setEditingVal]      = useState("");
   
@@ -2070,7 +2081,7 @@ function RepCountApp() {
           {/* POSE VIEW */}
           {poseActive && (
             <div style={{ marginBottom:"14px" }}>
-              <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} />
+              <PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode} onFlipCamera={() => { setFacingMode(m => m === "user" ? "environment" : "user"); setCameraKey(k => k+1); }} />
             </div>
           )}
 
@@ -2144,7 +2155,7 @@ function RepCountApp() {
           {/* POSE VIEW */}
           {poseActive && (
             <div style={{ marginBottom:"14px" }}>
-              <PoseView color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} />
+              <PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode} onFlipCamera={() => { setFacingMode(m => m === "user" ? "environment" : "user"); setCameraKey(k => k+1); }} />
             </div>
           )}
 
