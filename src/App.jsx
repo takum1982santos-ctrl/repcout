@@ -111,7 +111,15 @@ const MSG_SET = [
 
 const rand = arr => arr[Math.floor(Math.random() * arr.length)];
 const PR_KEY         = "repcount-prs";
-const ROUTINES_KEY   = "repcount-routines";
+const ROUTINES_KEY         = "repcount-routines";
+const WORKOUT_ROUTINES_KEY = "repcount-workout-routines";
+
+async function loadWorkoutRoutines() {
+  try { const r = await window.storage.get(WORKOUT_ROUTINES_KEY); return r ? JSON.parse(r.value) : []; } catch { return []; }
+}
+async function saveWorkoutRoutines(routines) {
+  try { await window.storage.set(WORKOUT_ROUTINES_KEY, JSON.stringify(routines)); } catch {}
+}
 
 async function loadHistory() {
   try { const r = await window.storage.get(STORAGE_KEY); return r ? JSON.parse(r.value) : []; } catch { return []; }
@@ -1606,6 +1614,203 @@ function HistoryScreen({ onBack }) {
   );
 }
 
+// ─── ROUTINES SCREEN ─────────────────────────────────────────────────────────
+
+function RoutinesScreen({ routines, onBack, onSave, onStart }) {
+  const [view, setView]         = useState("list");  // "list" | "build"
+  const [editing, setEditing]   = useState(null);    // rutina en edición
+  const [name, setName]         = useState("");
+  const [exList, setExList]     = useState([]);      // [{ exerciseId, sets, duration }]
+  const [restBetween, setRestBetween] = useState(90);
+  const [restBetweenSets, setRestBetweenSets] = useState(60);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const startNew = () => {
+    setName("Mi Rutina");
+    setExList([]);
+    setRestBetween(90);
+    setRestBetweenSets(60);
+    setEditing(null);
+    setView("build");
+  };
+
+  const startEdit = (r) => {
+    setName(r.name);
+    setExList([...r.exercises]);
+    setRestBetween(r.restBetweenExercises || 90);
+    setRestBetweenSets(r.restBetweenSets || 60);
+    setEditing(r.id);
+    setView("build");
+  };
+
+  const saveRutina = () => {
+    if (exList.length === 0) return;
+    const nueva = {
+      id: editing || Date.now().toString(),
+      name: name || "Rutina",
+      exercises: exList,
+      restBetweenExercises: restBetween,
+      restBetweenSets,
+    };
+    const updated = editing
+      ? routines.map(r => r.id === editing ? nueva : r)
+      : [...routines, nueva];
+    onSave(updated);
+    setView("list");
+  };
+
+  const deleteRutina = (id) => {
+    onSave(routines.filter(r => r.id !== id));
+  };
+
+  const addEx = (ex) => {
+    setExList(prev => [...prev, { exerciseId: ex.id, sets: 3, duration: 120 }]);
+    setPickerOpen(false);
+  };
+
+  const removeEx = (idx) => setExList(prev => prev.filter((_, i) => i !== idx));
+
+  const updateEx = (idx, campo, val) => {
+    setExList(prev => prev.map((e, i) => i === idx ? { ...e, [campo]: val } : e));
+  };
+
+  const btnStepper = { width:"36px", height:"36px", borderRadius:"8px", border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.04)", color:"#fff", fontSize:"18px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 };
+
+  if (view === "build") return (
+    <div style={{ minHeight:"100vh", background:"#0A0A0F", fontFamily:"'Bebas Neue','Arial Black',sans-serif", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", padding:"40px 20px", position:"relative" }}>
+      <div style={{ width:"100%", maxWidth:"420px" }}>
+        <div style={{ display:"flex", alignItems:"center", marginBottom:"24px" }}>
+          <button onClick={() => setView("list")} style={{ background:"none", border:"none", color:"#666", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", padding:0 }}>← VOLVER</button>
+          <div style={{ flex:1, textAlign:"center", fontSize:"16px", letterSpacing:"4px" }}>{editing ? "EDITAR" : "NUEVA"} RUTINA</div>
+        </div>
+
+        {/* Nombre */}
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre de la rutina"
+          style={{ width:"100%", padding:"12px 16px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:"12px", color:"#fff", fontSize:"18px", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:"2px", outline:"none", boxSizing:"border-box", marginBottom:"20px" }}/>
+
+        {/* Descanso entre ejercicios */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"10px 14px", marginBottom:"16px" }}>
+          <div style={{ fontSize:"11px", letterSpacing:"3px", color:"#555" }}>DESCANSO ENTRE EJERCICIOS</div>
+          <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+            <button onClick={() => setRestBetween(v => Math.max(15, v-15))} style={btnStepper}>−</button>
+            <div style={{ fontSize:"18px", color:"#FF4D4D", minWidth:"44px", textAlign:"center" }}>{restBetween}s</div>
+            <button onClick={() => setRestBetween(v => v+15)} style={btnStepper}>+</button>
+          </div>
+        </div>
+
+        {/* Lista de ejercicios */}
+        <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#444", marginBottom:"10px" }}>EJERCICIOS</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom:"12px" }}>
+          {exList.map((item, idx) => {
+            const ex = exercises.find(e => e.id === item.exerciseId);
+            const C2 = ex?.color || "#FF4D4D";
+            return (
+              <div key={idx} style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${C2}33`, borderRadius:"12px", padding:"10px 12px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"8px" }}>
+                  <span style={{ fontSize:"20px" }}>{ex?.icon}</span>
+                  <div style={{ flex:1, fontSize:"14px", letterSpacing:"2px", color:C2 }}>{ex?.name?.toUpperCase()}</div>
+                  <div style={{ fontSize:"11px", color:"#444", fontFamily:"sans-serif" }}>#{idx+1}</div>
+                  <button onClick={() => removeEx(idx)} style={{ background:"none", border:"none", color:"#444", cursor:"pointer", fontSize:"16px", padding:0 }}>✕</button>
+                </div>
+                <div style={{ display:"flex", gap:"8px" }}>
+                  <div style={{ flex:1, display:"flex", alignItems:"center", gap:"4px", background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"4px 8px" }}>
+                    <button onClick={() => updateEx(idx,"sets", Math.max(1, item.sets-1))} style={{ ...btnStepper, width:"28px", height:"28px" }}>−</button>
+                    <div style={{ flex:1, textAlign:"center", fontSize:"14px", color:C2 }}>{item.sets} sets</div>
+                    <button onClick={() => updateEx(idx,"sets", item.sets+1)} style={{ ...btnStepper, width:"28px", height:"28px" }}>+</button>
+                  </div>
+                  <div style={{ flex:1, display:"flex", alignItems:"center", gap:"4px", background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"4px 8px" }}>
+                    <button onClick={() => updateEx(idx,"duration", Math.max(15, item.duration-15))} style={{ ...btnStepper, width:"28px", height:"28px" }}>−</button>
+                    <div style={{ flex:1, textAlign:"center", fontSize:"14px", color:C2 }}>{Math.floor(item.duration/60)}:{String(item.duration%60).padStart(2,"0")}</div>
+                    <button onClick={() => updateEx(idx,"duration", item.duration+15)} style={{ ...btnStepper, width:"28px", height:"28px" }}>+</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Agregar ejercicio */}
+        <button onClick={() => setPickerOpen(v => !v)} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px dashed rgba(255,255,255,0.15)", borderRadius:"12px", color:"#666", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"4px" }}>
+          + AGREGAR EJERCICIO
+        </button>
+        {pickerOpen && (
+          <div style={{ background:"#0D0D14", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"12px", marginBottom:"12px", maxHeight:"220px", overflowY:"auto" }}>
+            {categories.map(cat => (
+              <div key={cat.id}>
+                <div style={{ padding:"6px 14px", fontSize:"9px", letterSpacing:"3px", color:cat.color+"88", background:"rgba(255,255,255,0.02)" }}>{cat.name.toUpperCase()}</div>
+                {cat.exercises.map(ex2 => (
+                  <button key={ex2.id} onClick={() => addEx(ex2)}
+                    style={{ width:"100%", padding:"9px 14px 9px 24px", background:"none", border:"none", color:"#888", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:"8px", fontSize:"13px", fontFamily:"sans-serif", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
+                    <span>{ex2.icon}</span><span>{ex2.name}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button onClick={saveRutina} disabled={exList.length === 0}
+          style={{ width:"100%", padding:"18px", background: exList.length > 0 ? "#FF4D4D" : "rgba(255,255,255,0.05)", border:"none", borderRadius:"14px", fontSize:"20px", letterSpacing:"4px", color: exList.length > 0 ? "#000" : "#333", cursor: exList.length > 0 ? "pointer" : "not-allowed", fontFamily:"'Bebas Neue',sans-serif", marginTop:"8px" }}>
+          GUARDAR RUTINA
+        </button>
+      </div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
+    </div>
+  );
+
+  // Vista lista
+  return (
+    <div style={{ minHeight:"100vh", background:"#0A0A0F", fontFamily:"'Bebas Neue','Arial Black',sans-serif", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", padding:"40px 20px", position:"relative" }}>
+      <div style={{ width:"100%", maxWidth:"420px" }}>
+        <div style={{ display:"flex", alignItems:"center", marginBottom:"24px" }}>
+          <button onClick={onBack} style={{ background:"none", border:"none", color:"#666", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", padding:0 }}>← VOLVER</button>
+          <div style={{ flex:1, textAlign:"center", fontSize:"22px", letterSpacing:"5px" }}>RUTINAS</div>
+          <button onClick={startNew} style={{ background:"none", border:"none", color:"#FF4D4D", cursor:"pointer", fontSize:"13px", letterSpacing:"2px", padding:0 }}>+ NUEVA</button>
+        </div>
+
+        {routines.length === 0 ? (
+          <div style={{ textAlign:"center", padding:"60px 20px" }}>
+            <div style={{ fontSize:"48px", marginBottom:"12px" }}>💪</div>
+            <div style={{ fontSize:"14px", letterSpacing:"4px", color:"#444" }}>SIN RUTINAS AÚN</div>
+            <div style={{ fontFamily:"sans-serif", fontSize:"12px", color:"#333", marginTop:"8px" }}>Creá tu primera rutina tocando + NUEVA</div>
+          </div>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+            {routines.map(r => (
+              <div key={r.id} style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"14px", padding:"14px 16px" }}>
+                <div style={{ display:"flex", alignItems:"center", marginBottom:"10px" }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:"18px", letterSpacing:"3px" }}>{r.name.toUpperCase()}</div>
+                    <div style={{ fontFamily:"sans-serif", fontSize:"10px", color:"#555", marginTop:"2px" }}>{r.exercises.length} ejercicios · {r.restBetweenExercises}s entre ejercicios</div>
+                  </div>
+                  <button onClick={() => startEdit(r)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:"13px", letterSpacing:"2px", padding:"4px 8px" }}>EDITAR</button>
+                  <button onClick={() => deleteRutina(r.id)} style={{ background:"none", border:"none", color:"#333", cursor:"pointer", fontSize:"16px", padding:"4px" }}>🗑</button>
+                </div>
+                {/* Preview ejercicios */}
+                <div style={{ display:"flex", gap:"4px", flexWrap:"wrap", marginBottom:"12px" }}>
+                  {r.exercises.map((item, i) => {
+                    const ex = exercises.find(e => e.id === item.exerciseId);
+                    return (
+                      <div key={i} style={{ background:`${ex?.color||"#FF4D4D"}18`, border:`1px solid ${ex?.color||"#FF4D4D"}33`, borderRadius:"8px", padding:"4px 8px", display:"flex", alignItems:"center", gap:"4px" }}>
+                        <span style={{ fontSize:"12px" }}>{ex?.icon}</span>
+                        <span style={{ fontSize:"10px", color:ex?.color||"#FF4D4D", letterSpacing:"1px" }}>{item.sets}x</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button onClick={() => onStart(r)} style={{ width:"100%", padding:"14px", background:"#FF4D4D", border:"none", borderRadius:"10px", fontSize:"16px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", boxShadow:"0 0 16px #FF4D4D44" }}>
+                  ▶ INICIAR RUTINA
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
+    </div>
+  );
+}
+
 // ─── MAIN APP ──────────────────────────────────────────────────────────────
 
 function RepCountApp() {
@@ -1636,7 +1841,12 @@ function RepCountApp() {
   const [lastSession, setLastSession]    = useState(null);
   const [poseActive, setPoseActive]      = useState(false);
   const [facingMode, setFacingMode]      = useState("user");
-  const [cameraKey, setCameraKey]        = useState(0); // fuerza remount al cambiar cámara
+  const [cameraKey, setCameraKey]        = useState(0);
+  // Rutinas de entrenamiento
+  const [workoutRoutines, setWorkoutRoutines] = useState([]);
+  const [activeRoutine, setActiveRoutine]     = useState(null); // rutina en ejecución
+  const [routineExIdx, setRoutineExIdx]       = useState(0);    // índice del ejercicio actual
+  const [routineLog, setRoutineLog]           = useState([]);   // reps por ejercicio
   const [editingField, setEditingField]  = useState(null);
   const [editingVal, setEditingVal]      = useState("");
   
@@ -1662,6 +1872,7 @@ function RepCountApp() {
   // Sembrar datos de prueba la primera vez
   useEffect(() => {
     seedFakeHistory();
+    loadWorkoutRoutines().then(r => setWorkoutRoutines(r));
   }, []);
 
   const [particles] = useState(() =>
@@ -1724,6 +1935,7 @@ function RepCountApp() {
     clearInterval(timerRef.current); cancelAnimationFrame(spinRef.current);
     setScreen("home"); setSelected(null); setReps(0); setTimeLeft(0); setElapsed(0);
     setSetRepsLog([]); setCurrentSet(1); setShowFireworks(false); setSessionSaved(false); setGoalReached(false); setOpenCat(null); setPoseActive(false);
+    setActiveRoutine(null); setRoutineExIdx(0); setRoutineLog([]);
   };
 
   // Pre-carga MoveNet durante el countdown — así cuando el usuario activa 🤖 los scripts ya están listos
@@ -1779,6 +1991,27 @@ function RepCountApp() {
     return () => clearInterval(timerRef.current);
   }, [screen, seriesMode, totalSets, restDuration, duration]);
 
+  // Timer para descanso entre ejercicios de rutina
+  useEffect(() => {
+    if (screen !== "routine_rest" || !activeRoutine) return;
+    timerRef.current = setInterval(() => {
+      setRestLeft(t => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          setReps(0); setActiveStep(0); setSetRepsLog([]); setCurrentSet(1);
+          setTimeLeft(activeRoutine.exercises[routineExIdx]?.duration || 120);
+          setSessionSaved(false);
+          setScreen("counting");
+          playBeep("go");
+          return 0;
+        }
+        if (t === 4) playBeep("ready");
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [screen]);
+
   useEffect(() => {
     if (screen !== "rest") return;
     let readyPlayed = false;
@@ -1821,6 +2054,34 @@ function RepCountApp() {
         saveSession(session);
         setLastSession(session);
         if (total > currentPR) savePR(selected.id, total);
+        // Si hay rutina activa, registrar el ejercicio y pasar al siguiente
+        if (activeRoutine) {
+          setRoutineLog(prev => {
+            const newLog = [...prev, { exerciseId: selected.id, totalReps: total }];
+            const nextIdx = routineExIdx + 1;
+            if (nextIdx < activeRoutine.exercises.length) {
+              // Hay más ejercicios — descanso entre ejercicios y después el siguiente
+              const nextEx = exercises.find(e => e.id === activeRoutine.exercises[nextIdx].exerciseId);
+              setTimeout(() => {
+                setRoutineExIdx(nextIdx);
+                selectExercise(nextEx).then(() => {
+                  setDuration(activeRoutine.exercises[nextIdx].duration || 120);
+                  setTotalSets(activeRoutine.exercises[nextIdx].sets || 3);
+                  setRestDuration(activeRoutine.restBetweenSets || 60);
+                  setRestLeft(activeRoutine.restBetweenExercises || 90);
+                  setSessionSaved(false);
+                  setScreen("routine_rest");
+                });
+              }, 100);
+            } else {
+              // Rutina completa
+              setTimeout(() => {
+                setScreen("routine_finished");
+              }, 100);
+            }
+            return newLog;
+          });
+        }
         return log;
       });
     }
@@ -1904,6 +2165,30 @@ function RepCountApp() {
     );
   }
 
+  if (screen === "routines") {
+    return (
+      <RoutinesScreen
+        routines={workoutRoutines}
+        onBack={() => setScreen("home")}
+        onSave={async (r) => { await saveWorkoutRoutines(r); setWorkoutRoutines(r); }}
+        onStart={(routine) => {
+          const firstEx = exercises.find(e => e.id === routine.exercises[0].exerciseId);
+          if (!firstEx) return;
+          setActiveRoutine(routine);
+          setRoutineExIdx(0);
+          setRoutineLog([]);
+          setDuration(routine.exercises[0].duration || 120);
+          setTotalSets(routine.exercises[0].sets || 3);
+          setRestDuration(routine.restBetweenSets || 60);
+          setMode("series");
+          setSeriesMode("time");
+          selectExercise(firstEx).then(() => startSession());
+          setScreen("home"); // se redirige solo al countdown
+        }}
+      />
+    );
+  }
+
   return (
     <div style={{ minHeight:"100vh", background:"#0A0A0F", fontFamily:"'Bebas Neue','Arial Black',sans-serif", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px", position:"relative", overflow:"hidden" }}>
       <div style={{ position:"absolute", top:"-100px", left:"50%", transform:"translateX(-50%)", width:"600px", height:"600px", background:`radial-gradient(circle, ${C}22 0%, transparent 70%)`, pointerEvents:"none", transition:"background 0.5s ease" }} />
@@ -1939,13 +2224,22 @@ function RepCountApp() {
               );
             })}
           </div>
-          <button onClick={() => setScreen("history")} style={{ width:"100%", padding:"10px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", display:"flex", alignItems:"center", gap:"10px", cursor:"pointer", color:"#fff", marginBottom:"20px", transition:"all 0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
-            onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
-            <span style={{ fontSize:"14px" }}>📋</span>
-            <div style={{ fontSize:"12px", letterSpacing:"3px", color:"#666" }}>VER HISTORIAL</div>
-            <span style={{ fontSize:"14px", color:"#333", marginLeft:"auto" }}>›</span>
-          </button>
+          <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
+            <button onClick={() => setScreen("history")} style={{ flex:1, padding:"10px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", display:"flex", alignItems:"center", gap:"8px", cursor:"pointer", color:"#fff", transition:"all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
+              onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
+              <span style={{ fontSize:"14px" }}>📋</span>
+              <div style={{ fontSize:"12px", letterSpacing:"3px", color:"#666" }}>HISTORIAL</div>
+              <span style={{ fontSize:"12px", color:"#333", marginLeft:"auto" }}>›</span>
+            </button>
+            <button onClick={() => setScreen("routines")} style={{ flex:1, padding:"10px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", display:"flex", alignItems:"center", gap:"8px", cursor:"pointer", color:"#fff", transition:"all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
+              onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
+              <span style={{ fontSize:"14px" }}>💪</span>
+              <div style={{ fontSize:"12px", letterSpacing:"3px", color:"#666" }}>RUTINAS</div>
+              <span style={{ fontSize:"12px", color:"#333", marginLeft:"auto" }}>›</span>
+            </button>
+          </div>
 
           <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#444", marginBottom:"12px" }}>EJERCICIOS</div>
           <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
@@ -2361,6 +2655,81 @@ function RepCountApp() {
           </div>
           <button onClick={() => { clearInterval(timerRef.current); setCurrentSet(cs=>cs+1); setReps(0); setActiveStep(0); setTimeLeft(duration); setScreen("counting"); playBeep("go"); }} style={{ width:"100%", padding:"16px", background:C, border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ SALTAR DESCANSO</button>
           <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>ABANDONAR</button>
+        </div>
+      )}
+
+      {/* ── ROUTINE REST — descanso entre ejercicios ── */}
+      {screen === "routine_rest" && activeRoutine && selected && (() => {
+        const nextEx = exercises.find(e => e.id === activeRoutine.exercises[routineExIdx].exerciseId);
+        const total = activeRoutine.exercises.length;
+        return (
+          <div style={{ width:"100%", maxWidth:"420px", zIndex:1, textAlign:"center" }}>
+            <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#555", marginBottom:"4px" }}>RUTINA · EJERCICIO {routineExIdx + 1} DE {total}</div>
+            <div style={{ fontSize:"13px", letterSpacing:"3px", color:"#FF4D4D", marginBottom:"32px" }}>DESCANSÁ</div>
+            <div style={{ position:"relative", width:"180px", height:"180px", margin:"0 auto 24px" }}>
+              <svg width="180" height="180" style={{ transform:"rotate(-90deg)" }}>
+                <circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/>
+                <circle cx="90" cy="90" r="78" fill="none" stroke="#FF4D4D" strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={`${2*Math.PI*78}`} strokeDashoffset={`${2*Math.PI*78*(restLeft/(activeRoutine.restBetweenExercises||90))}`}
+                  style={{ transition:"stroke-dashoffset 1s linear", filter:"drop-shadow(0 0 8px #FF4D4D)" }}/>
+              </svg>
+              <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center" }}>
+                <div style={{ fontSize:"52px", lineHeight:1 }}>{fmt(restLeft)}</div>
+                <div style={{ fontSize:"9px", letterSpacing:"3px", color:"#555", marginTop:"4px" }}>REST</div>
+              </div>
+            </div>
+            {nextEx && (
+              <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"14px", padding:"14px", marginBottom:"20px" }}>
+                <div style={{ fontSize:"10px", letterSpacing:"4px", color:"#555", marginBottom:"6px" }}>SIGUIENTE</div>
+                <div style={{ fontSize:"20px", marginBottom:"4px" }}>{nextEx.icon}</div>
+                <div style={{ fontSize:"18px", letterSpacing:"3px", color:nextEx.color }}>{nextEx.name.toUpperCase()}</div>
+              </div>
+            )}
+            <button onClick={() => {
+              clearInterval(timerRef.current);
+              setRestLeft(0);
+              setReps(0); setActiveStep(0); setSetRepsLog([]); setCurrentSet(1);
+              setTimeLeft(activeRoutine.exercises[routineExIdx].duration || 120);
+              setSessionSaved(false);
+              setScreen("counting");
+              playBeep("go");
+            }} style={{ width:"100%", padding:"16px", background:"#FF4D4D", border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ EMPEZAR YA</button>
+            <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif" }}>ABANDONAR</button>
+          </div>
+        );
+      })()}
+
+      {/* ── ROUTINE FINISHED ── */}
+      {screen === "routine_finished" && activeRoutine && (
+        <div style={{ width:"100%", maxWidth:"420px", zIndex:1, textAlign:"center" }}>
+          <div style={{ fontSize:"13px", letterSpacing:"6px", color:"#FF4D4D", marginBottom:"8px" }}>RUTINA COMPLETADA 🎉</div>
+          <div style={{ fontSize:"24px", letterSpacing:"3px", marginBottom:"24px" }}>{activeRoutine.name.toUpperCase()}</div>
+          {/* Resumen por ejercicio */}
+          <div style={{ display:"flex", flexDirection:"column", gap:"8px", marginBottom:"24px" }}>
+            {routineLog.map((item, i) => {
+              const ex = exercises.find(e => e.id === item.exerciseId);
+              const C2 = ex?.color || "#FF4D4D";
+              return (
+                <div key={i} style={{ background:"rgba(255,255,255,0.03)", border:`1px solid ${C2}33`, borderRadius:"12px", padding:"12px 16px", display:"flex", alignItems:"center", gap:"12px" }}>
+                  <span style={{ fontSize:"20px" }}>{ex?.icon}</span>
+                  <div style={{ flex:1, textAlign:"left" }}>
+                    <div style={{ fontSize:"14px", letterSpacing:"2px", color:C2 }}>{ex?.name?.toUpperCase()}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:"28px", color:C2, lineHeight:1 }}>{item.totalReps}</div>
+                    <div style={{ fontSize:"8px", color:"#555", letterSpacing:"2px" }}>REPS</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ background:"rgba(255,77,77,0.08)", border:"1px solid #FF4D4D33", borderRadius:"14px", padding:"16px", marginBottom:"24px" }}>
+            <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#555", marginBottom:"4px" }}>TOTAL REPS</div>
+            <div style={{ fontSize:"72px", lineHeight:1, color:"#FF4D4D", textShadow:"0 0 40px #FF4D4D88" }}>
+              {routineLog.reduce((a, b) => a + b.totalReps, 0)}
+            </div>
+          </div>
+          <button onClick={resetApp} style={{ width:"100%", padding:"18px", background:"#FF4D4D", border:"none", borderRadius:"14px", fontSize:"20px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"8px" }}>IR AL INICIO</button>
         </div>
       )}
 
