@@ -292,14 +292,24 @@ function calcAngle(a, b, c) {
 // Mejoras: best-side selection, confidence checks, ángulos correctos para
 // dominadas y burpees, y retorna conf para el overlay visual.
 
-const MIN_CONF = 0.35;
+const MIN_CONF = 0.25; // bajado de 0.35 para mejor detección en dispositivos de gama baja (A03s)
 
 const REP_DETECTORS = {
-  // ── EMPUJE: ángulo de codo, mejor lado ──────────────────────────────────
+  // ── EMPUJE: ángulo de codo + verificación de plancha ────────────────────
+  // isPlank: hombro, cadera y tobillo alineados horizontalmente (Y similares)
   flexiones: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    // Verificar posición de plancha: cadera no debe estar mucho más alta o baja que hombros
+    const hipY  = (kps[11][1] + kps[12][1]) / 2;
+    const shdY  = (kps[5][1]  + kps[6][1])  / 2;
+    const ankY  = (kps[15][1] + kps[16][1]) / 2;
+    // En plancha la cadera está entre hombros y tobillos en Y, con poca variación vertical
+    const hipOffset = Math.abs(hipY - shdY);
+    const bodyLen   = Math.abs(ankY - shdY);
+    const isPlank   = bodyLen > 50 && hipOffset < bodyLen * 0.35;
+    if (!isPlank) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 90 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
@@ -308,6 +318,13 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    const hipY  = (kps[11][1] + kps[12][1]) / 2;
+    const shdY  = (kps[5][1]  + kps[6][1])  / 2;
+    const ankY  = (kps[15][1] + kps[16][1]) / 2;
+    const hipOffset = Math.abs(hipY - shdY);
+    const bodyLen   = Math.abs(ankY - shdY);
+    const isPlank   = bodyLen > 50 && hipOffset < bodyLen * 0.35;
+    if (!isPlank) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 85 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
@@ -325,6 +342,12 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
     const cR = Math.min(kps[12][2], kps[14][2], kps[16][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    // Verificar simetría: ambas rodillas deben estar a altura similar (sentadilla bilateral)
+    // Si una rodilla está mucho más alta que la otra es zancada o rodilla al pecho
+    const kneeYdiff = Math.abs(kps[13][1] - kps[14][1]);
+    const hipW      = Math.abs(kps[11][0] - kps[12][0]);
+    const isSymmetric = hipW < 10 || kneeYdiff < hipW * 0.8;
+    if (!isSymmetric) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
     return { angle: Math.round(a), phase: a < 100 ? "down" : a > 160 ? "up" : null, conf: L ? cL : cR };
@@ -333,6 +356,12 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
     const cR = Math.min(kps[12][2], kps[14][2], kps[16][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    // Verificar asimetría: en zancada una pierna está adelante, la otra atrás
+    // Los tobillos deben estar separados en X (profundidad de la zancada)
+    const ankXdiff = Math.abs(kps[15][0] - kps[16][0]);
+    const hipW     = Math.abs(kps[11][0] - kps[12][0]);
+    const isLunge  = ankXdiff > hipW * 0.5;
+    if (!isLunge) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
     return { angle: Math.round(a), phase: a < 105 ? "down" : a > 160 ? "up" : null, conf: L ? cL : cR };
