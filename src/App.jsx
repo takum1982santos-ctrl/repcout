@@ -514,6 +514,9 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
         // Algunos phones (A03s) se quedan en ESPERANDO sin este paso
         try { await detector.estimatePoses(videoRef.current); } catch(e) {}
 
+        // Timeout: si después de 15s el modelo no detecta nada, avisar al usuario
+        let framesSinDeteccion = 0;
+        const MAX_FRAMES_SIN_DETECCION = 90; // ~15s a 6fps en mobile lento
         onStatus("ACTIVO");
 
         // 🔧 SPEED OPT 4: frame skipping en mobile (1 de cada 2 frames)
@@ -536,6 +539,18 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
             const poses = await detector.estimatePoses(videoRef.current);
             if (poses?.[0]?.keypoints?.length >= 17) {
               const kps = poses[0].keypoints.map(k => [k.x, k.y, k.score ?? k.confidence ?? 0]);
+              // Verificar que al menos algunos keypoints tengan confianza mínima
+              const kpsValidos = kps.filter(k => k[2] >= MIN_CONF).length;
+              if (kpsValidos < 3) {
+                framesSinDeteccion++;
+                if (framesSinDeteccion >= MAX_FRAMES_SIN_DETECCION) {
+                  onStatus("Sin detección — usá + MANUAL");
+                  framesSinDeteccion = 0; // reset para no spamear
+                }
+                frameRef.current = requestAnimationFrame(detect);
+                return;
+              }
+              framesSinDeteccion = 0;
               keypointsRef.current = kps;
 
               const repDet = REP_DETECTORS[exerciseId];
