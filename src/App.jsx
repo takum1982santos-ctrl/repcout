@@ -301,13 +301,14 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    // Verificar plancha: en cualquier ángulo de cámara, la cadera NO debe estar
-    // muy por debajo de los hombros en Y (eso indicaría posición vertical/sentado).
-    // En plancha (de frente, costado o diagonal) hipY ≈ shdY.
-    const hipY = (kps[11][1] + kps[12][1]) / 2;
-    const shdY = (kps[5][1]  + kps[6][1])  / 2;
-    const frameH = 480; // alto de referencia del video
-    const isPlank = (hipY - shdY) < frameH * 0.18; // cadera no más de 18% del frame abajo del hombro
+    // Verificar plancha: muñecas y tobillos deben estar a altura similar en Y
+    // (ambos cerca del suelo). En cuclillas/parado las muñecas están arriba.
+    const wristY = Math.max(kps[9][1], kps[10][1]);   // muñeca más baja en pantalla
+    const ankleY = Math.max(kps[15][1], kps[16][1]);  // tobillo más bajo en pantalla
+    const shdY   = (kps[5][1] + kps[6][1]) / 2;
+    const bodyH  = Math.abs(ankleY - shdY);            // altura del cuerpo en pantalla
+    // muñecas deben estar en el tercio inferior del cuerpo (cerca del suelo)
+    const isPlank = bodyH > 40 && (ankleY - wristY) < bodyH * 0.55;
     if (!isPlank) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
@@ -317,10 +318,11 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    const hipY2 = (kps[11][1] + kps[12][1]) / 2;
-    const shdY2 = (kps[5][1]  + kps[6][1])  / 2;
-    const frameH2 = 480;
-    const isPlank2 = (hipY2 - shdY2) < frameH2 * 0.18;
+    const wristY2 = Math.max(kps[9][1], kps[10][1]);
+    const ankleY2 = Math.max(kps[15][1], kps[16][1]);
+    const shdY2   = (kps[5][1] + kps[6][1]) / 2;
+    const bodyH2  = Math.abs(ankleY2 - shdY2);
+    const isPlank2 = bodyH2 > 40 && (ankleY2 - wristY2) < bodyH2 * 0.55;
     if (!isPlank2) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
@@ -519,6 +521,11 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
           if (cancelled || !videoRef.current) return;
           frameCount++;
           if (frameCount % SKIP !== 0) {
+            frameRef.current = requestAnimationFrame(detect);
+            return;
+          }
+          // Esperar a que el video tenga frames reales (evita freeze en A03s)
+          if (videoRef.current.readyState < 2 || videoRef.current.videoWidth === 0) {
             frameRef.current = requestAnimationFrame(detect);
             return;
           }
