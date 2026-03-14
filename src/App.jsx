@@ -301,15 +301,14 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    // Verificar plancha: muñecas y tobillos deben estar a altura similar en Y
-    // (ambos cerca del suelo). En cuclillas/parado las muñecas están arriba.
-    const wristY = Math.max(kps[9][1], kps[10][1]);   // muñeca más baja en pantalla
-    const ankleY = Math.max(kps[15][1], kps[16][1]);  // tobillo más bajo en pantalla
-    const shdY   = (kps[5][1] + kps[6][1]) / 2;
-    const bodyH  = Math.abs(ankleY - shdY);            // altura del cuerpo en pantalla
-    // muñecas deben estar en el tercio inferior del cuerpo (cerca del suelo)
-    const isPlank = bodyH > 40 && (ankleY - wristY) < bodyH * 0.55;
-    if (!isPlank) return { angle: null, phase: null, conf: 0 };
+    // Verificar plancha: los hombros NO deben estar muy por encima de las caderas.
+    // Parado/sentado: shdY << hipY (hombros altos, caderas bajas en pantalla).
+    // En plancha (cualquier ángulo): shdY ≈ hipY.
+    const shdY = (kps[5][1] + kps[6][1]) / 2;
+    const hipY = (kps[11][1] + kps[12][1]) / 2;
+    // Si la cadera está más de 30% del alto del video por debajo del hombro → de pie
+    const notPlank = (hipY - shdY) > 130;
+    if (notPlank) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 90 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
@@ -318,12 +317,10 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    const wristY2 = Math.max(kps[9][1], kps[10][1]);
-    const ankleY2 = Math.max(kps[15][1], kps[16][1]);
-    const shdY2   = (kps[5][1] + kps[6][1]) / 2;
-    const bodyH2  = Math.abs(ankleY2 - shdY2);
-    const isPlank2 = bodyH2 > 40 && (ankleY2 - wristY2) < bodyH2 * 0.55;
-    if (!isPlank2) return { angle: null, phase: null, conf: 0 };
+    const shdY2 = (kps[5][1] + kps[6][1]) / 2;
+    const hipY2 = (kps[11][1] + kps[12][1]) / 2;
+    const notPlank2 = (hipY2 - shdY2) > 130;
+    if (notPlank2) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 85 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
@@ -355,11 +352,13 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
     const cR = Math.min(kps[12][2], kps[14][2], kps[16][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    // Verificar asimetría: en zancada una pierna está adelante, la otra atrás
-    // Los tobillos deben estar separados en X (profundidad de la zancada)
-    const ankXdiff = Math.abs(kps[15][0] - kps[16][0]);
-    const hipW     = Math.abs(kps[11][0] - kps[12][0]);
-    const isLunge  = ankXdiff > hipW * 0.5;
+    // Verificar asimetría de zancada: una rodilla debe estar significativamente
+    // más abajo que la otra en Y (la rodilla trasera cae hacia el suelo)
+    const kneeYdiff = Math.abs(kps[13][1] - kps[14][1]);
+    const ankYdiff  = Math.abs(kps[15][1] - kps[16][1]);
+    const hipW      = Math.abs(kps[11][0] - kps[12][0]) || 40;
+    // En zancada las rodillas están a diferente altura Y, o los tobillos separados
+    const isLunge = kneeYdiff > hipW * 0.4 || ankYdiff > hipW * 0.4;
     if (!isLunge) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
@@ -511,6 +510,10 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
             enableSmoothing: true,
           }
         );
+        // Warm-up: pasar un frame al modelo para que inicialice los pesos internos
+        // Algunos phones (A03s) se quedan en ESPERANDO sin este paso
+        try { await detector.estimatePoses(videoRef.current); } catch(e) {}
+
         onStatus("ACTIVO");
 
         // 🔧 SPEED OPT 4: frame skipping en mobile (1 de cada 2 frames)
@@ -566,6 +569,9 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
                         onRep();
                       }
                     }
+                  } else {
+                    // Zona neutral: limpiar historial para evitar fase "fantasma"
+                    phaseHistRef.current = [];
                   }
                 } else {
                   onAngle?.({ angle: null, phase: phaseRef.current, conf: 0 });
@@ -680,7 +686,7 @@ function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }
 
         // Bones normales
         CONNECTIONS.forEach(([a, b]) => {
-          if (kps[a][2] < 0.3 || kps[b][2] < 0.3) return;
+          if (kps[a][2] < 0.2 || kps[b][2] < 0.2) return;
           const [ax, ay] = px(a), [bx, by] = px(b);
           const isHL = hlFlat.has(a) && hlFlat.has(b);
           ctx.strokeStyle = isHL ? color : `${color}55`;
@@ -694,7 +700,7 @@ function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }
 
         // Keypoints
         kps.forEach(([x, y, score], i) => {
-          if (score < 0.3) return;
+          if (score < 0.2) return;
           const [px2, py2] = [W - x * scaleX, y * scaleY];
           const isHL = hlFlat.has(i);
           ctx.fillStyle   = isHL ? color : `${color}77`;
