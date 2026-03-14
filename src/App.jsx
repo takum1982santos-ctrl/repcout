@@ -301,14 +301,13 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    // Verificar posición de plancha: cadera no debe estar mucho más alta o baja que hombros
-    const hipY  = (kps[11][1] + kps[12][1]) / 2;
-    const shdY  = (kps[5][1]  + kps[6][1])  / 2;
-    const ankY  = (kps[15][1] + kps[16][1]) / 2;
-    // En plancha la cadera está entre hombros y tobillos en Y, con poca variación vertical
-    const hipOffset = Math.abs(hipY - shdY);
-    const bodyLen   = Math.abs(ankY - shdY);
-    const isPlank   = bodyLen > 50 && hipOffset < bodyLen * 0.35;
+    // Verificar plancha: en cualquier ángulo de cámara, la cadera NO debe estar
+    // muy por debajo de los hombros en Y (eso indicaría posición vertical/sentado).
+    // En plancha (de frente, costado o diagonal) hipY ≈ shdY.
+    const hipY = (kps[11][1] + kps[12][1]) / 2;
+    const shdY = (kps[5][1]  + kps[6][1])  / 2;
+    const frameH = 480; // alto de referencia del video
+    const isPlank = (hipY - shdY) < frameH * 0.18; // cadera no más de 18% del frame abajo del hombro
     if (!isPlank) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
@@ -318,13 +317,11 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    const hipY  = (kps[11][1] + kps[12][1]) / 2;
-    const shdY  = (kps[5][1]  + kps[6][1])  / 2;
-    const ankY  = (kps[15][1] + kps[16][1]) / 2;
-    const hipOffset = Math.abs(hipY - shdY);
-    const bodyLen   = Math.abs(ankY - shdY);
-    const isPlank   = bodyLen > 50 && hipOffset < bodyLen * 0.35;
-    if (!isPlank) return { angle: null, phase: null, conf: 0 };
+    const hipY2 = (kps[11][1] + kps[12][1]) / 2;
+    const shdY2 = (kps[5][1]  + kps[6][1])  / 2;
+    const frameH2 = 480;
+    const isPlank2 = (hipY2 - shdY2) < frameH2 * 0.18;
+    if (!isPlank2) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 85 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
@@ -494,15 +491,17 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
 
         onStatus("2/3 · Motor IA...");
 
-        // 🔧 SPEED OPT 3: fallback de backend — webgl → cpu (wasm no disponible siempre)
+        // 🔧 SPEED OPT 3: fallback de backend — webgl → cpu
+        let backendUsed = "cpu";
         try {
           await window.tf.setBackend("webgl");
           await window.tf.ready();
+          backendUsed = "webgl";
         } catch(e) {
           try { await window.tf.setBackend("cpu"); await window.tf.ready(); } catch(e2) {}
         }
 
-        onStatus("3/3 · Modelo pose...");
+        onStatus("3/3 · Modelo pose... [" + backendUsed + "]");
         const detector = await window.poseDetection.createDetector(
           window.poseDetection.SupportedModels.MoveNet,
           {
