@@ -1086,6 +1086,10 @@ function HistoryScreen({ onBack }) {
   const [confirmClear, setConfirmClear] = useState(false);
   const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
   const [selectedDay, setSelectedDay] = useState(null);
+  // Rutina semanal: { 0..6: { exerciseId, hora, activo } } (0=lunes)
+  const [rutina, setRutina] = useState({});
+  const [notifPermiso, setNotifPermiso] = useState(typeof Notification !== "undefined" ? Notification.permission : "default");
+  const [rutinaPickerDay, setRutinaPickerDay] = useState(null); // qué día está abriendo el selector
 
   useEffect(() => {
     (async () => {
@@ -1093,7 +1097,10 @@ function HistoryScreen({ onBack }) {
         await seedFakeHistory();
         const h = await loadHistory();
         if (h && h.length > 0) setHistory(h);
-      } catch { /* mantiene FAKE_HISTORY */ }
+        // Cargar rutina guardada
+        const r = await loadRoutines();
+        if (r && Object.keys(r).length > 0) setRutina(r);
+      } catch { /* mantiene defaults */ }
     })();
   }, []);
 
@@ -1242,9 +1249,9 @@ function HistoryScreen({ onBack }) {
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:"6px", marginBottom:"20px" }}>
-        {[{id:"cal",label:"📅 CALENDARIO"},{id:"all",label:"SESIONES"},{id:"stats",label:"STATS"}].map(t => (
+        {[{id:"cal",label:"📅 CAL"},{id:"all",label:"SESIONES"},{id:"stats",label:"STATS"},{id:"rutina",label:"🗓 RUTINA"}].map(t => (
           <button key={t.id} onClick={() => { setTab(t.id); setSelectedDay(null); }}
-            style={{ flex:1, padding:"9px 4px", background:tab===t.id?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)", border:`1px solid ${tab===t.id?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.07)"}`, borderRadius:"10px", color:tab===t.id?"#fff":"#555", cursor:"pointer", fontSize:"12px", letterSpacing:"2px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>
+            style={{ flex:1, padding:"9px 4px", background:tab===t.id?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)", border:`1px solid ${tab===t.id?"rgba(255,255,255,0.2)":"rgba(255,255,255,0.07)"}`, borderRadius:"10px", color:tab===t.id?"#fff":"#555", cursor:"pointer", fontSize:"11px", letterSpacing:"1px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>
             {t.label}
           </button>
         ))}
@@ -1299,14 +1306,22 @@ function HistoryScreen({ onBack }) {
                 const hasSessions = sessions.length > 0;
                 const isSelected = selectedDay === day;
                 const dots = sessions.slice(0,3).map(s => exercises.find(e => e.id === s.exerciseId)?.color || "#FF4D4D");
+                // Día de la semana (0=lunes) para mostrar rutina planeada
+                const dowCell = (new Date(year, month, day).getDay() + 6) % 7;
+                const rutinaDelDia = rutina[dowCell];
+                const tieneRutina = rutinaDelDia?.exerciseId && rutinaDelDia?.activo;
+                const rutColor = tieneRutina ? (exercises.find(e => e.id === rutinaDelDia.exerciseId)?.color || "#FF4D4D") : null;
                 return (
                   <button key={i} onClick={() => setSelectedDay(isSelected ? null : day)}
-                    style={{ aspectRatio:"1", borderRadius:"10px", border:`1px solid ${isSelected?"rgba(255,255,255,0.3)":hasSessions?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.04)"}`, background:isSelected?"rgba(255,255,255,0.1)":hasSessions?"rgba(255,255,255,0.05)":"transparent", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"2px", padding:"4px", position:"relative", transition:"all 0.15s" }}>
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"15px", color:isToday(day)?"#FF4D4D":isSelected?"#fff":hasSessions?"#ccc":"#333", lineHeight:1 }}>{day}</span>
+                    style={{ aspectRatio:"1", borderRadius:"10px", border:`1px solid ${isSelected?"rgba(255,255,255,0.3)":hasSessions?"rgba(255,255,255,0.1)":tieneRutina?`${rutColor}33`:"rgba(255,255,255,0.04)"}`, background:isSelected?"rgba(255,255,255,0.1)":hasSessions?"rgba(255,255,255,0.05)":tieneRutina?`${rutColor}0a`:"transparent", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"2px", padding:"4px", position:"relative", transition:"all 0.15s" }}>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"15px", color:isToday(day)?"#FF4D4D":isSelected?"#fff":hasSessions?"#ccc":tieneRutina?rutColor+"aa":"#333", lineHeight:1 }}>{day}</span>
                     {hasSessions && (
                       <div style={{ display:"flex", gap:"2px", justifyContent:"center" }}>
                         {dots.map((c,di) => <div key={di} style={{ width:"4px", height:"4px", borderRadius:"50%", background:c, boxShadow:`0 0 4px ${c}` }} />)}
                       </div>
+                    )}
+                    {!hasSessions && tieneRutina && (
+                      <div style={{ width:"4px", height:"4px", borderRadius:"50%", background:rutColor+"66", border:`1px dashed ${rutColor}` }} />
                     )}
                     {isToday(day) && <div style={{ position:"absolute", top:"3px", right:"4px", width:"4px", height:"4px", borderRadius:"50%", background:"#FF4D4D" }} />}
                   </button>
@@ -1460,6 +1475,133 @@ function HistoryScreen({ onBack }) {
         </div>
       )}
 
+      {/* ── TAB RUTINA ── */}
+      {tab === "rutina" && (() => {
+        const diasNombre = ["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"];
+        const hoy = (new Date().getDay() + 6) % 7; // 0=lunes
+
+        const pedirPermiso = async () => {
+          if (typeof Notification === "undefined") return;
+          const p = await Notification.requestPermission();
+          setNotifPermiso(p);
+        };
+
+        const programarNotificacion = (diaIdx, exId, hora) => {
+          if (notifPermiso !== "granted" || !hora || !exId) return;
+          const ex = exercises.find(e => e.id === exId);
+          if (!ex) return;
+          const ahora = new Date();
+          const [hh, mm] = hora.split(":").map(Number);
+          // Calcular próxima ocurrencia de este día de la semana a esa hora
+          const diasHastaProximo = (diaIdx - hoy + 7) % 7 || 0;
+          const objetivo = new Date(ahora);
+          objetivo.setDate(ahora.getDate() + diasHastaProximo);
+          objetivo.setHours(hh, mm, 0, 0);
+          if (objetivo <= ahora) objetivo.setDate(objetivo.getDate() + 7);
+          const ms = objetivo - ahora;
+          setTimeout(() => {
+            new Notification("RepCount 💪", {
+              body: `Hoy toca: ${ex.icon} ${ex.name}`,
+              icon: "/icon.png",
+            });
+          }, ms);
+        };
+
+        const guardarDia = async (diaIdx, campo, valor) => {
+          const nueva = { ...rutina, [diaIdx]: { ...(rutina[diaIdx] || { hora:"07:00", activo:true }), [campo]: valor }};
+          setRutina(nueva);
+          await saveRoutines(nueva);
+          // Reprogramar si está activo
+          const d = nueva[diaIdx];
+          if (d?.activo && d?.exerciseId && d?.hora) programarNotificacion(diaIdx, d.exerciseId, d.hora);
+        };
+
+        return (
+          <div>
+            {/* Banner de notificaciones */}
+            {notifPermiso !== "granted" && (
+              <div style={{ background:"rgba(255,77,77,0.08)", border:"1px solid #FF4D4D33", borderRadius:"12px", padding:"12px 14px", marginBottom:"16px", display:"flex", alignItems:"center", gap:"10px" }}>
+                <span style={{ fontSize:"18px" }}>🔔</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:"11px", letterSpacing:"2px", color:"#FF4D4D" }}>NOTIFICACIONES DESACTIVADAS</div>
+                  <div style={{ fontFamily:"sans-serif", fontSize:"10px", color:"#555", marginTop:"2px" }}>Activá para recibir avisos cuando toca entrenar</div>
+                </div>
+                <button onClick={pedirPermiso} style={{ padding:"6px 12px", background:"#FF4D4D", border:"none", borderRadius:"8px", color:"#000", cursor:"pointer", fontSize:"11px", letterSpacing:"2px", fontFamily:"'Bebas Neue',sans-serif" }}>ACTIVAR</button>
+              </div>
+            )}
+
+            {/* Días de la semana */}
+            <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+              {diasNombre.map((nombre, diaIdx) => {
+                const d = rutina[diaIdx] || {};
+                const ex = exercises.find(e => e.id === d.exerciseId);
+                const esHoy = diaIdx === hoy;
+                const abriendo = rutinaPickerDay === diaIdx;
+                return (
+                  <div key={diaIdx} style={{ background: esHoy ? "rgba(255,77,77,0.06)" : "rgba(255,255,255,0.02)", border:`1px solid ${esHoy?"#FF4D4D33":d.exerciseId?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.05)"}`, borderRadius:"12px", overflow:"hidden" }}>
+                    {/* Fila principal */}
+                    <div style={{ display:"flex", alignItems:"center", gap:"10px", padding:"10px 12px" }}>
+                      {/* Día */}
+                      <div style={{ width:"36px", textAlign:"center" }}>
+                        <div style={{ fontSize:"11px", letterSpacing:"2px", color: esHoy ? "#FF4D4D" : "#555" }}>{nombre.slice(0,3)}</div>
+                        {esHoy && <div style={{ fontSize:"8px", color:"#FF4D4D44", fontFamily:"sans-serif" }}>hoy</div>}
+                      </div>
+                      {/* Ejercicio seleccionado */}
+                      <button onClick={() => setRutinaPickerDay(abriendo ? null : diaIdx)}
+                        style={{ flex:1, background:"rgba(255,255,255,0.04)", border:`1px solid ${ex?ex.color+"44":"rgba(255,255,255,0.08)"}`, borderRadius:"8px", padding:"7px 10px", display:"flex", alignItems:"center", gap:"8px", cursor:"pointer", color:"#fff", textAlign:"left", transition:"all 0.15s" }}>
+                        {ex ? (
+                          <>
+                            <span style={{ fontSize:"14px" }}>{ex.icon}</span>
+                            <span style={{ fontSize:"11px", letterSpacing:"1px", color:ex.color }}>{ex.name.toUpperCase()}</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize:"11px", color:"#444", letterSpacing:"1px" }}>— SIN EJERCICIO</span>
+                        )}
+                        <span style={{ marginLeft:"auto", fontSize:"12px", color:"#444" }}>{abriendo?"▲":"▼"}</span>
+                      </button>
+                      {/* Hora */}
+                      <input type="time" value={d.hora || "07:00"}
+                        onChange={e => guardarDia(diaIdx, "hora", e.target.value)}
+                        style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"8px", color:"#888", padding:"6px 8px", fontSize:"12px", fontFamily:"sans-serif", outline:"none", width:"76px" }}/>
+                      {/* Toggle activo */}
+                      <button onClick={() => guardarDia(diaIdx, "activo", !d.activo)}
+                        style={{ width:"32px", height:"18px", borderRadius:"9px", background:d.activo&&d.exerciseId?"#FF4D4D":"rgba(255,255,255,0.1)", border:"none", cursor:"pointer", position:"relative", flexShrink:0, transition:"background 0.2s" }}>
+                        <div style={{ position:"absolute", top:"2px", left: d.activo&&d.exerciseId?"14px":"2px", width:"14px", height:"14px", borderRadius:"50%", background:"#fff", transition:"left 0.2s" }}/>
+                      </button>
+                    </div>
+                    {/* Picker de ejercicio */}
+                    {abriendo && (
+                      <div style={{ borderTop:"1px solid rgba(255,255,255,0.06)", maxHeight:"200px", overflowY:"auto" }}>
+                        <button onClick={() => { guardarDia(diaIdx, "exerciseId", null); setRutinaPickerDay(null); }}
+                          style={{ width:"100%", padding:"10px 14px", background:"none", border:"none", color:"#444", cursor:"pointer", textAlign:"left", fontSize:"12px", fontFamily:"sans-serif", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+                          — Sin ejercicio
+                        </button>
+                        {categories.map(cat => (
+                          <div key={cat.id}>
+                            <div style={{ padding:"6px 14px", fontSize:"9px", letterSpacing:"3px", color:cat.color+"88", background:"rgba(255,255,255,0.02)" }}>{cat.name.toUpperCase()}</div>
+                            {cat.exercises.map(ex2 => (
+                              <button key={ex2.id} onClick={() => { guardarDia(diaIdx, "exerciseId", ex2.id); setRutinaPickerDay(null); }}
+                                style={{ width:"100%", padding:"9px 14px 9px 24px", background: d.exerciseId===ex2.id?`${ex2.color}18`:"none", border:"none", color: d.exerciseId===ex2.id?ex2.color:"#888", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:"8px", fontSize:"12px", fontFamily:"sans-serif", borderBottom:"1px solid rgba(255,255,255,0.03)" }}>
+                                <span>{ex2.icon}</span>
+                                <span>{ex2.name}</span>
+                                {d.exerciseId===ex2.id && <span style={{ marginLeft:"auto" }}>✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontFamily:"sans-serif", fontSize:"10px", color:"#333", textAlign:"center", marginTop:"14px" }}>
+              Las notificaciones solo funcionan con el navegador abierto
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }
@@ -1573,8 +1715,6 @@ function RepCountApp() {
       setElapsed(0); setScreen("libre");
     } else if (seriesMode === "reps") {
       setCurrentSet(1); setSetRepsLog([]); setScreen("counting");
-    } else if (seriesMode === "tabata") {
-      setTimeLeft(workDuration); setCurrentSet(1); setSetRepsLog([]); setScreen("counting");
     } else {
       setTimeLeft(duration); setCurrentSet(1); setSetRepsLog([]); setScreen("counting");
     }
@@ -1612,8 +1752,8 @@ function RepCountApp() {
     if (screen !== "counting") return;
     // Modo reps: sin timer, el set termina cuando el usuario alcanza repsPerSet
     if (seriesMode === "reps") return;
-    // Modo time o tabata: timer countdown
-    const setDur = seriesMode === "tabata" ? workDuration : duration;
+    // Modo time: timer countdown
+    const setDur = duration;
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
@@ -1637,7 +1777,7 @@ function RepCountApp() {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [screen, seriesMode, totalSets, restDuration, workDuration, duration]);
+  }, [screen, seriesMode, totalSets, restDuration, duration]);
 
   useEffect(() => {
     if (screen !== "rest") return;
@@ -1747,8 +1887,7 @@ function RepCountApp() {
     return h > 0 ? `${h}:${m}:${sec}` : `${m}:${sec}`;
   };
   const pct = screen==="counting"
-    ? seriesMode === "reps"   ? (reps / repsPerSet) * 100
-    : seriesMode === "tabata" ? ((workDuration - timeLeft) / workDuration) * 100
+    ? seriesMode === "reps" ? (reps / repsPerSet) * 100
     : ((duration - timeLeft) / duration) * 100
     : screen==="rest" ? ((restDuration - restLeft) / restDuration) * 100
     : 100;
@@ -1781,8 +1920,8 @@ function RepCountApp() {
       {screen === "home" && (
         <div style={{ width:"100%", maxWidth:"420px", zIndex:1 }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"24px" }}>
-            <div style={{ fontSize:"24px", letterSpacing:"4px" }}>REP<span style={{ color:"#FF4D4D" }}>COUNT</span></div>
-            <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#FF4D4D", background:"rgba(255,77,77,0.1)", border:"1px solid rgba(255,77,77,0.25)", borderRadius:"20px", padding:"3px 10px" }}>AI POWERED</div>
+            <div style={{ fontSize:"32px", letterSpacing:"6px", textShadow:"0 0 30px #FF4D4D66" }}>REP<span style={{ color:"#FF4D4D", textShadow:"0 0 20px #FF4D4D" }}>COUNT</span></div>
+            <div style={{ fontSize:"9px", letterSpacing:"2px", color:"#FF4D4D", background:"rgba(255,77,77,0.12)", border:"1px solid rgba(255,77,77,0.3)", borderRadius:"20px", padding:"4px 10px", boxShadow:"0 0 10px rgba(255,77,77,0.15)" }}>AI POWERED</div>
           </div>
 
           {/* SELECTOR DE MODO */}
@@ -1790,22 +1929,22 @@ function RepCountApp() {
             {[
               { id:"series", label:"📋 SERIES",   desc:"Sets + descanso + tiempo" },
               { id:"libre",  label:"⏱ LIBRE",     desc:"Cronómetro libre, vos manejás" },
-            ].map(m => (
-              <button key={m.id} onClick={() => setMode(m.id)} style={{ flex:1, padding:"12px 10px", background:mode===m.id?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.03)", border:`1px solid ${mode===m.id?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.07)"}`, borderRadius:"12px", cursor:"pointer", transition:"all 0.2s", textAlign:"center" }}>
-                <div style={{ fontSize:"14px", letterSpacing:"2px", color:mode===m.id?"#fff":"#555", fontFamily:"'Bebas Neue',sans-serif" }}>{m.label}</div>
-                <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:mode===m.id?"#888":"#333", marginTop:"3px", letterSpacing:"0.5px" }}>{m.desc}</div>
-              </button>
-            ))}
+            ].map(m => {
+              const active = mode === m.id;
+              return (
+                <button key={m.id} onClick={() => setMode(m.id)} style={{ flex:1, padding:"12px 10px", background:active?"#FF4D4D":"rgba(255,255,255,0.03)", border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`, borderRadius:"12px", cursor:"pointer", transition:"all 0.2s", textAlign:"center", boxShadow:active?"0 0 16px #FF4D4D55":"none" }}>
+                  <div style={{ fontSize:"14px", letterSpacing:"2px", color:active?"#000":"#555", fontFamily:"'Bebas Neue',sans-serif" }}>{m.label}</div>
+                  <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:active?"#00000077":"#333", marginTop:"3px", letterSpacing:"0.5px" }}>{m.desc}</div>
+                </button>
+              );
+            })}
           </div>
-          <button onClick={() => setScreen("history")} style={{ width:"100%", padding:"14px 20px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"12px", display:"flex", alignItems:"center", gap:"12px", cursor:"pointer", color:"#fff", marginBottom:"20px", transition:"all 0.2s" }}
+          <button onClick={() => setScreen("history")} style={{ width:"100%", padding:"10px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", display:"flex", alignItems:"center", gap:"10px", cursor:"pointer", color:"#fff", marginBottom:"20px", transition:"all 0.2s" }}
             onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
             onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
-            <span style={{ fontSize:"20px" }}>📋</span>
-            <div style={{ flex:1, textAlign:"left" }}>
-              <div style={{ fontSize:"16px", letterSpacing:"3px" }}>VER HISTORIAL</div>
-              <div style={{ fontFamily:"sans-serif", fontSize:"10px", color:"#555", marginTop:"1px" }}>Sesiones anteriores y estadísticas</div>
-            </div>
-            <span style={{ fontSize:"18px", color:"#444" }}>›</span>
+            <span style={{ fontSize:"14px" }}>📋</span>
+            <div style={{ fontSize:"12px", letterSpacing:"3px", color:"#666" }}>VER HISTORIAL</div>
+            <span style={{ fontSize:"14px", color:"#333", marginLeft:"auto" }}>›</span>
           </button>
 
           <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#444", marginBottom:"12px" }}>EJERCICIOS</div>
@@ -1884,9 +2023,8 @@ function RepCountApp() {
           {/* SELECTOR DE SUB-MODO (solo en series) */}
           {mode === "series" && (() => {
             const modos = [
-              { id:"time",   label:"TIEMPO",  icon:"⏱", desc:"Tiempo fijo por set" },
+              { id:"time",   label:"TIEMPO",  icon:"⏱", desc:"Duración fija por set" },
               { id:"reps",   label:"REPS",    icon:"🔢", desc:"Meta de reps por set" },
-              { id:"tabata", label:"TABATA",  icon:"⚡", desc:"Trabajo / Descanso" },
             ];
             return (
               <div style={{ display:"flex", gap:"6px", marginBottom:"20px" }}>
@@ -1906,89 +2044,47 @@ function RepCountApp() {
 
           {/* CONFIGURACIÓN DINÁMICA */}
           {mode === "series" && (() => {
-            // toMmSs: segundos → "MM:SS"
             const toMmSs = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-            // parseMmSs: "MM:SS" o número suelto → segundos
-            const parseMmSs = raw => {
-              if (raw.includes(":")) {
-                const [m,s] = raw.split(":").map(Number);
-                return (!isNaN(m) && !isNaN(s)) ? m*60+s : null;
-              }
-              const n = parseInt(raw);
-              return isNaN(n) ? null : n;
-            };
 
-            // Campo de tiempo: muestra MM:SS, acepta "MM:SS" o segundos al escribir
-            const timeRow = (label, val, setFn) => {
-              const isEditing = editingField === label;
-              const confirm = raw => {
-                const n = parseMmSs(raw.trim());
-                if (n !== null && n > 0) setFn(n);
-                setEditingField(null); setEditingVal("");
-              };
-              return (
-                <div key={label} style={{ marginBottom:"12px" }}>
-                  <div style={{ fontSize:"10px", letterSpacing:"4px", color:"#555", marginBottom:"6px" }}>{label}</div>
-                  {isEditing ? (
-                    <input autoFocus defaultValue={toMmSs(val)} placeholder="MM:SS"
-                      onBlur={e => confirm(e.target.value)}
-                      onKeyDown={e => { if(e.key==="Enter") confirm(e.target.value); if(e.key==="Escape"){ setEditingField(null); } }}
-                      style={{ width:"100%", padding:"10px 14px", background:"rgba(255,255,255,0.07)", border:`1px solid ${C}`, borderRadius:"10px", color:C, fontSize:"28px", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:"3px", outline:"none", boxSizing:"border-box", textAlign:"center" }}
-                    />
-                  ) : (
-                    <div onClick={() => setEditingField(label)}
-                      style={{ width:"100%", padding:"10px 14px", background:"rgba(255,255,255,0.03)", border:`1px solid ${C}22`, borderRadius:"10px", color:C, fontSize:"28px", fontFamily:"'DSEG7 Classic',monospace", letterSpacing:"3px", cursor:"text", boxSizing:"border-box", textAlign:"center", textShadow:`0 0 6px ${C}33` }}>
-                      {toMmSs(val)}
-                    </div>
-                  )}
-                </div>
-              );
-            };
+            const btnStyle = { width:"48px", height:"48px", borderRadius:"10px", border:`1px solid ${C}44`, background:"rgba(255,255,255,0.04)", color:C, fontSize:"22px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontFamily:"sans-serif", lineHeight:1, transition:"all 0.15s" };
+            const valStyle = { flex:1, textAlign:"center", fontSize:"32px", color:C, fontFamily:"'DSEG7 Classic',monospace", letterSpacing:"2px", textShadow:`0 0 8px ${C}44` };
 
-            // Campo numérico simple: sets, reps, rondas
-            const numRow = (label, val, setFn, unit) => {
-              const isEditing = editingField === label;
-              const confirm = raw => {
-                const n = parseInt(raw);
-                if (!isNaN(n) && n > 0) setFn(n);
-                setEditingField(null); setEditingVal("");
-              };
-              return (
-                <div key={label} style={{ marginBottom:"12px" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"6px" }}>
-                    <div style={{ fontSize:"10px", letterSpacing:"4px", color:"#555" }}>{label}</div>
-                    <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:"#444" }}>{unit}</div>
-                  </div>
-                  {isEditing ? (
-                    <input autoFocus type="number" defaultValue={val}
-                      onBlur={e => confirm(e.target.value)}
-                      onKeyDown={e => { if(e.key==="Enter") confirm(e.target.value); if(e.key==="Escape"){ setEditingField(null); } }}
-                      style={{ width:"100%", padding:"10px 14px", background:"rgba(255,255,255,0.07)", border:`1px solid ${C}`, borderRadius:"10px", color:C, fontSize:"28px", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:"2px", outline:"none", boxSizing:"border-box", textAlign:"center", MozAppearance:"textfield" }}
-                    />
-                  ) : (
-                    <div onClick={() => setEditingField(label)}
-                      style={{ width:"100%", padding:"10px 14px", background:"rgba(255,255,255,0.03)", border:`1px solid ${C}22`, borderRadius:"10px", color:C, fontSize:"28px", fontFamily:"'DSEG7 Classic',monospace", letterSpacing:"2px", cursor:"text", boxSizing:"border-box", textAlign:"center", textShadow:`0 0 6px ${C}33` }}>
-                      {String(val).padStart(2,"0")}
-                    </div>
-                  )}
+            // Control de tiempo: pasos de 15s con botones +/-
+            const timeRow = (label, val, setFn, step=15) => (
+              <div key={label} style={{ marginBottom:"14px" }}>
+                <div style={{ fontSize:"10px", letterSpacing:"4px", color:"#555", marginBottom:"8px" }}>{label}</div>
+                <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"rgba(255,255,255,0.03)", border:`1px solid ${C}22`, borderRadius:"12px", padding:"8px" }}>
+                  <button onClick={() => setFn(v => Math.max(step, v - step))} style={btnStyle}>−</button>
+                  <div style={valStyle}>{toMmSs(val)}</div>
+                  <button onClick={() => setFn(v => v + step)} style={btnStyle}>+</button>
                 </div>
-              );
-            };
+              </div>
+            );
+
+            // Control numérico: sets, reps, rondas
+            const numRow = (label, val, setFn, unit, step=1, min=1) => (
+              <div key={label} style={{ marginBottom:"14px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"8px" }}>
+                  <div style={{ fontSize:"10px", letterSpacing:"4px", color:"#555" }}>{label}</div>
+                  <div style={{ fontFamily:"sans-serif", fontSize:"9px", color:"#444" }}>{unit}</div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:"8px", background:"rgba(255,255,255,0.03)", border:`1px solid ${C}22`, borderRadius:"12px", padding:"8px" }}>
+                  <button onClick={() => setFn(v => Math.max(min, v - step))} style={btnStyle}>−</button>
+                  <div style={valStyle}>{String(val).padStart(2,"0")}</div>
+                  <button onClick={() => setFn(v => v + step)} style={btnStyle}>+</button>
+                </div>
+              </div>
+            );
 
             if (seriesMode === "time") return (<>
-              {timeRow("DURACIÓN", duration, setDuration)}
+              {timeRow("DURACIÓN", duration, setDuration, 15)}
               {numRow("SERIES", totalSets, setTotalSets, "sets")}
-              {timeRow("DESCANSO", restDuration, setRestDuration)}
+              {timeRow("DESCANSO", restDuration, setRestDuration, 15)}
             </>);
             if (seriesMode === "reps") return (<>
               {numRow("REPS POR SET", repsPerSet, setRepsPerSet, "reps")}
               {numRow("SERIES", totalSets, setTotalSets, "sets")}
-              {timeRow("DESCANSO", restDuration, setRestDuration)}
-            </>);
-            if (seriesMode === "tabata") return (<>
-              {timeRow("TRABAJO", workDuration, setWorkDuration)}
-              {timeRow("DESCANSO", restDuration, setRestDuration)}
-              {numRow("RONDAS", totalSets, setTotalSets, "rondas")}
+              {timeRow("DESCANSO", restDuration, setRestDuration, 15)}
             </>);
           })()}
 
@@ -2010,9 +2106,8 @@ function RepCountApp() {
 
           {mode === "series" && (() => {
             let secs = 0;
-            if (seriesMode === "time")   secs = totalSets * duration + (totalSets - 1) * restDuration;
-            if (seriesMode === "tabata") secs = totalSets * (workDuration + restDuration);
-            if (seriesMode === "reps")   secs = (totalSets - 1) * restDuration;
+            if (seriesMode === "time") secs = totalSets * duration + (totalSets - 1) * restDuration;
+            if (seriesMode === "reps") secs = (totalSets - 1) * restDuration;
             const mm = String(Math.floor(secs / 60)).padStart(2,"0");
             const ss = String(secs % 60).padStart(2,"0");
             return (
@@ -2077,25 +2172,40 @@ function RepCountApp() {
             ))}
           </div>
           <div style={{ fontSize:"10px", letterSpacing:"3px", color:C+"99", marginBottom:"16px" }}>
-            {seriesMode === "tabata" ? `RONDA ${currentSet} / ${totalSets}` : `SET ${currentSet} / ${totalSets}`}
+            {`SET ${currentSet} / ${totalSets}`}
           </div>
 
-          {/* BIG RING */}
-          <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 16px" }}>
-            <svg width="240" height="240" style={{ transform:"rotate(-90deg)", position:"absolute", top:0, left:0 }}>
-              <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
-              <circle cx="120" cy="120" r="108" fill="none" stroke={C} strokeWidth="8" strokeLinecap="round"
-                strokeDasharray={`${2*Math.PI*108}`} strokeDashoffset={`${2*Math.PI*108*(1-pct/100)}`}
-                style={{ transition:seriesMode==="reps"?"stroke-dashoffset 0.3s ease":"stroke-dashoffset 1s linear", filter:`drop-shadow(0 0 10px ${C})` }}/>
-            </svg>
-            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center", width:"180px" }}>
-              <div style={{ fontSize:"88px", lineHeight:1, color:goalReached?"#FFD700":C, textShadow:`0 0 40px ${goalReached?"#FFD700":C}88`, transition:"color 0.3s", fontVariantNumeric:"tabular-nums" }}>{reps}</div>
-              <div style={{ fontSize:"10px", letterSpacing:"5px", color:"#444", marginTop:"2px" }}>
-                {seriesMode === "reps" ? `/ ${repsPerSet}` : "REPS"}
+          {/* CRONÓMETRO — barra fina con tiempo, solo en modos con tiempo */}
+          {seriesMode !== "reps" && (
+            <div style={{ marginBottom:"12px", padding:"0 8px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"5px" }}>
+                <div style={{ fontSize:"9px", letterSpacing:"3px", color:"#444" }}>TIEMPO</div>
+                <div style={{ fontSize:"20px", letterSpacing:"2px", color:timeLeft<=10?"#FF4D4D":C, fontVariantNumeric:"tabular-nums", transition:"color 0.3s", textShadow:timeLeft<=10?`0 0 12px #FF4D4D`:"none" }}>{fmt(timeLeft)}</div>
               </div>
-              {seriesMode !== "reps" && (
-                <div style={{ fontSize:"22px", letterSpacing:"2px", color:timeLeft<=10?"#FF4D4D":"#888", marginTop:"6px", fontVariantNumeric:"tabular-nums", transition:"color 0.3s" }}>{fmt(timeLeft)}</div>
-              )}
+              <div style={{ height:"4px", borderRadius:"2px", background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
+                <div style={{ height:"100%", borderRadius:"2px", width:`${pct}%`, background:timeLeft<=10?"#FF4D4D":C, transition:"width 1s linear", boxShadow:`0 0 8px ${timeLeft<=10?"#FF4D4D":C}` }}/>
+              </div>
+            </div>
+          )}
+
+          {/* BIG COUNTER — protagonista total */}
+          <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 16px" }}>
+            {/* Ring solo en modo reps */}
+            {seriesMode === "reps" && (
+              <svg width="240" height="240" style={{ transform:"rotate(-90deg)", position:"absolute", top:0, left:0 }}>
+                <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
+                <circle cx="120" cy="120" r="108" fill="none" stroke={C} strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray={`${2*Math.PI*108}`} strokeDashoffset={`${2*Math.PI*108*(1-pct/100)}`}
+                  style={{ transition:"stroke-dashoffset 0.3s ease", filter:`drop-shadow(0 0 10px ${C})` }}/>
+              </svg>
+            )}
+            {/* Glow de fondo */}
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"180px", height:"180px", borderRadius:"50%", background:`radial-gradient(circle, ${goalReached?"#FFD700":C}18 0%, transparent 70%)`, transition:"background 0.3s" }}/>
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center", width:"200px" }}>
+              <div style={{ fontSize:"112px", lineHeight:0.9, color:goalReached?"#FFD700":C, textShadow:`0 0 60px ${goalReached?"#FFD700":C}99`, transition:"color 0.3s, text-shadow 0.3s", fontVariantNumeric:"tabular-nums" }}>{reps}</div>
+              <div style={{ fontSize:"11px", letterSpacing:"6px", color:"#333", marginTop:"8px" }}>
+                {seriesMode === "reps" ? `/ ${repsPerSet} REPS` : "REPS"}
+              </div>
             </div>
           </div>
 
@@ -2168,20 +2278,23 @@ function RepCountApp() {
 
           <div style={{ fontSize:"9px", letterSpacing:"6px", color:"#555", marginBottom:"16px" }}>⏱ MODO LIBRE</div>
 
-          {/* BIG RING: elapsed spinner + reps inside */}
+          {/* CRONÓMETRO LIBRE — barra fina con elapsed */}
+          <div style={{ marginBottom:"12px", padding:"0 8px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"5px" }}>
+              <div style={{ fontSize:"9px", letterSpacing:"3px", color:"#444" }}>TIEMPO</div>
+              <div style={{ fontSize:"20px", letterSpacing:"2px", color:C, fontVariantNumeric:"tabular-nums" }}>{fmt(elapsed)}</div>
+            </div>
+            <div style={{ height:"4px", borderRadius:"2px", background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
+              <div style={{ height:"100%", borderRadius:"2px", width:`${((elapsed % 180) / 180) * 100}%`, background:goalReached?"#FFD700":C, transition:"width 1s linear", boxShadow:`0 0 8px ${goalReached?"#FFD700":C}` }}/>
+            </div>
+          </div>
+
+          {/* BIG COUNTER — protagonista total */}
           <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 20px" }}>
-            <svg width="240" height="240" style={{ transform:"rotate(-90deg)", position:"absolute", top:0, left:0 }}>
-              <circle cx="120" cy="120" r="108" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
-              {/* pulsing arc that grows with time — 1 rev each 3 min */}
-              <circle cx="120" cy="120" r="108" fill="none" stroke={goalReached?"#FFD700":C} strokeWidth="8" strokeLinecap="round"
-                strokeDasharray={`${2*Math.PI*108}`}
-                strokeDashoffset={`${2*Math.PI*108*(1 - (elapsed % 180)/180)}`}
-                style={{ transition:"stroke-dashoffset 1s linear", filter:`drop-shadow(0 0 10px ${goalReached?"#FFD700":C})` }}/>
-            </svg>
-            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center", width:"180px" }}>
-              <div style={{ fontSize:"88px", lineHeight:1, color:goalReached?"#FFD700":C, textShadow:`0 0 40px ${goalReached?"#FFD700":C}88`, transition:"color 0.3s", fontVariantNumeric:"tabular-nums" }}>{reps}</div>
-              <div style={{ fontSize:"10px", letterSpacing:"5px", color:"#444", marginTop:"2px" }}>REPS</div>
-              <div style={{ fontSize:"22px", letterSpacing:"2px", color:"#888", marginTop:"6px", fontVariantNumeric:"tabular-nums" }}>{fmt(elapsed)}</div>
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"180px", height:"180px", borderRadius:"50%", background:`radial-gradient(circle, ${goalReached?"#FFD700":C}18 0%, transparent 70%)`, transition:"background 0.3s" }}/>
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center", width:"200px" }}>
+              <div style={{ fontSize:"112px", lineHeight:0.9, color:goalReached?"#FFD700":C, textShadow:`0 0 60px ${goalReached?"#FFD700":C}99`, transition:"color 0.3s, text-shadow 0.3s", fontVariantNumeric:"tabular-nums" }}>{reps}</div>
+              <div style={{ fontSize:"11px", letterSpacing:"6px", color:"#333", marginTop:"8px" }}>REPS</div>
             </div>
           </div>
 
@@ -2257,41 +2370,66 @@ function RepCountApp() {
           {showFireworks && particles.map(p => (
             <div key={p.id} style={{ position:"absolute", top:"50%", left:"50%", width:`${p.size}px`, height:`${p.size}px`, borderRadius:"50%", background:p.color, boxShadow:`0 0 ${p.size*2}px ${p.color}`, animation:`explode-${p.id} 1.5s ease-out forwards`, opacity:0 }} />
           ))}
-          <div style={{ display:"inline-flex", alignItems:"center", gap:"6px", background:"rgba(0,201,167,0.12)", border:"1px solid #00C9A744", borderRadius:"20px", padding:"5px 14px", marginBottom:"12px" }}>
-            <span style={{ fontSize:"12px" }}>✅</span>
-            <span style={{ fontSize:"11px", letterSpacing:"3px", color:"#00C9A7" }}>SESIÓN GUARDADA</span>
+
+          {/* HERO — impacto visual principal */}
+          <div style={{ position:"relative", marginBottom:"24px" }}>
+            {/* Glow de fondo grande */}
+            <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"280px", height:"280px", borderRadius:"50%", background:`radial-gradient(circle, ${C}30 0%, transparent 70%)`, pointerEvents:"none" }}/>
+            {/* Ejercicio */}
+            <div style={{ fontSize:"13px", letterSpacing:"6px", color:C+"99", marginBottom:"8px" }}>{selected.icon} {selected.name.toUpperCase()}</div>
+            {/* Número grande */}
+            <div style={{ fontSize:"120px", lineHeight:0.85, color:C, textShadow:`0 0 80px ${C}`, fontVariantNumeric:"tabular-nums", animation:"finishPop 0.5s ease-out" }}>{grandTotal}</div>
+            <div style={{ fontSize:"12px", letterSpacing:"8px", color:"#555", marginTop:"10px" }}>REPS TOTALES</div>
+            {/* Badge guardado */}
+            <div style={{ display:"inline-flex", alignItems:"center", gap:"6px", background:"rgba(0,201,167,0.12)", border:"1px solid #00C9A744", borderRadius:"20px", padding:"4px 12px", marginTop:"12px" }}>
+              <span style={{ fontSize:"10px" }}>✅</span>
+              <span style={{ fontSize:"10px", letterSpacing:"3px", color:"#00C9A7" }}>GUARDADO</span>
+            </div>
           </div>
-          <div style={{ fontSize:"13px", letterSpacing:"6px", color:C, marginBottom:"4px" }}>¡SESIÓN COMPLETADA!</div>
-          <div style={{ fontSize:"36px", color:C, letterSpacing:"3px", marginBottom:"4px" }}>{selected.icon} {selected.name.toUpperCase()}</div>
-          <div style={{ fontSize:"90px", lineHeight:1, color:C, textShadow:`0 0 60px ${C}88`, marginBottom:"4px" }}>{grandTotal}</div>
-          <div style={{ fontSize:"14px", letterSpacing:"6px", color:"#555", marginBottom:"24px" }}>REPS TOTALES</div>
-          <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
-            {setRepsLog.map((r,i) => {
-              const best = Math.max(...setRepsLog);
-              const p2 = best > 0 ? r/best : 0;
-              return (
-                <div key={i} style={{ flex:1, background:"rgba(255,255,255,0.03)", border:`1px solid ${r===best?C:C+"33"}`, borderRadius:"12px", padding:"12px 8px", position:"relative", overflow:"hidden" }}>
-                  <div style={{ position:"absolute", bottom:0, left:0, right:0, height:`${p2*100}%`, background:`${C}18` }}/>
-                  <div style={{ position:"relative" }}>
-                    <div style={{ fontSize:"28px", color:r===best?C:C+"aa" }}>{r}</div>
-                    <div style={{ fontSize:"9px", color:"#555", fontFamily:"sans-serif" }}>SET {i+1}</div>
-                    {r===best && setRepsLog.filter(x=>x===best).length===1 && <div style={{ fontSize:"10px", color:C }}>★</div>}
+
+          {/* SETS — barras de progreso */}
+          {setRepsLog.length > 0 && (
+            <div style={{ display:"flex", gap:"6px", marginBottom:"16px" }}>
+              {setRepsLog.map((r,i) => {
+                const best = Math.max(...setRepsLog);
+                const pct2 = best > 0 ? r/best : 0;
+                return (
+                  <div key={i} style={{ flex:1, background:"rgba(255,255,255,0.03)", border:`1px solid ${r===best?C:C+"22"}`, borderRadius:"10px", padding:"10px 6px", position:"relative", overflow:"hidden" }}>
+                    <div style={{ position:"absolute", bottom:0, left:0, right:0, height:`${pct2*100}%`, background:`${C}22`, transition:"height 0.8s ease" }}/>
+                    <div style={{ position:"relative" }}>
+                      <div style={{ fontSize:"26px", color:r===best?C:C+"88", textShadow:r===best?`0 0 12px ${C}88`:"none" }}>{r}</div>
+                      <div style={{ fontSize:"8px", color:"#444", fontFamily:"sans-serif", marginTop:"1px" }}>S{i+1}</div>
+                      {r===best && setRepsLog.filter(x=>x===best).length===1 && (
+                        <div style={{ fontSize:"9px", color:C, marginTop:"1px" }}>★</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
-            {[{ val:totalSets,label:"SETS" },{ val:grandTotal,label:"REPS" },{ val:(grandTotal/(totalSets*duration)).toFixed(1),label:"REPS/MIN" },{ val:Math.max(...setRepsLog,0),label:"MEJOR SET" }].map(({ val,label }) => (
-              <div key={label} style={{ flex:1, background:"rgba(255,255,255,0.03)", border:`1px solid ${C}33`, borderRadius:"12px", padding:"12px 6px" }}>
-                <div style={{ fontSize:"24px", color:C }}>{val}</div>
-                <div style={{ fontSize:"8px", letterSpacing:"1px", color:"#555", fontFamily:"sans-serif" }}>{label}</div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* STATS — con color y más presencia */}
+          <div style={{ display:"flex", gap:"8px", marginBottom:"24px" }}>
+            {[
+              { val:totalSets,                                                          label:"SETS",      icon:"📋" },
+              { val:(grandTotal/(totalSets*(duration/60)||1)).toFixed(1),              label:"REPS/MIN",  icon:"⚡" },
+              { val:Math.max(...setRepsLog, 0),                                        label:"MEJOR SET", icon:"★" },
+            ].map(({ val, label, icon }) => (
+              <div key={label} style={{ flex:1, background:`${C}10`, border:`1px solid ${C}44`, borderRadius:"12px", padding:"14px 6px" }}>
+                <div style={{ fontSize:"10px", marginBottom:"4px" }}>{icon}</div>
+                <div style={{ fontSize:"26px", color:C, textShadow:`0 0 12px ${C}66`, lineHeight:1 }}>{val}</div>
+                <div style={{ fontSize:"8px", letterSpacing:"1px", color:C+"77", fontFamily:"sans-serif", marginTop:"4px" }}>{label}</div>
               </div>
             ))}
           </div>
-          <button onClick={() => setScreen("history")} style={{ width:"100%", padding:"14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:"12px", fontSize:"15px", letterSpacing:"3px", color:"#aaa", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>📋 VER EN HISTORIAL</button>
-          <button onClick={startSession} style={{ width:"100%", padding:"18px", background:C, border:"none", borderRadius:"14px", fontSize:"20px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>REPETIR SESIÓN</button>
-          <button onClick={resetApp} style={{ width:"100%", padding:"14px", background:"none", border:"1px solid #333", borderRadius:"12px", color:"#666", cursor:"pointer", fontSize:"14px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif" }}>NUEVA SESIÓN</button>
+
+          {/* BOTONES */}
+          <button onClick={startSession} style={{ width:"100%", padding:"18px", background:C, border:"none", borderRadius:"14px", fontSize:"20px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"8px", boxShadow:`0 0 20px ${C}55` }}>REPETIR SESIÓN</button>
+          <div style={{ display:"flex", gap:"8px" }}>
+            <button onClick={() => setScreen("history")} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"12px", fontSize:"13px", letterSpacing:"3px", color:"#777", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>📋 HISTORIAL</button>
+            <button onClick={resetApp} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"12px", fontSize:"13px", letterSpacing:"3px", color:"#777", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>NUEVA</button>
+          </div>
         </div>
       )}
 
@@ -2302,6 +2440,7 @@ function RepCountApp() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes prPop{0%{opacity:0;transform:translateX(-50%) scale(0.7)}60%{transform:translateX(-50%) scale(1.05)}100%{opacity:1;transform:translateX(-50%) scale(1)}}
         @keyframes toastIn{0%{opacity:0;transform:translateX(-50%) translateY(16px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}
+        @keyframes finishPop{0%{opacity:0;transform:scale(0.6)}70%{transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
         ${particles.map(p=>`@keyframes explode-${p.id}{0%{opacity:1;transform:rotate(${p.angle}deg) translateX(20px) scale(1)}60%{opacity:1;transform:rotate(${p.angle}deg) translateX(${p.distance}px) scale(1.2)}100%{opacity:0;transform:rotate(${p.angle}deg) translateX(${p.distance*1.5}px) scale(0)}}`).join("")}
       `}</style>
     </div>
