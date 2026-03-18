@@ -2655,9 +2655,38 @@ function RepCountApp() {
       )}
       {screen === "rest" && selected && (
         <div style={{ width:"100%", maxWidth:"420px", zIndex:1, textAlign:"center" }}>
-          <div style={{ fontSize:"13px", letterSpacing:"6px", color:"#555", marginBottom:"8px" }}>DESCANSO</div>
-          <div style={{ fontSize:"11px", letterSpacing:"3px", color:C, marginBottom:"32px" }}>PRÓXIMO: SET {currentSet+1} / {totalSets}</div>
-          <div style={{ position:"relative", width:"180px", height:"180px", margin:"0 auto 32px" }}>
+
+          {/* Título */}
+          <div style={{ fontSize:"13px", letterSpacing:"6px", color:"#555", marginBottom:"6px" }}>DESCANSO</div>
+
+          {/* Puntitos de progreso de sets */}
+          <div style={{ display:"flex", gap:"6px", justifyContent:"center", marginBottom:"20px" }}>
+            {Array.from({ length: totalSets }).map((_, i) => {
+              const done = i < currentSet - 1;
+              const next = i === currentSet - 1;
+              return (
+                <div key={i} style={{
+                  width: next ? "22px" : "8px", height:"8px", borderRadius:"4px",
+                  background: done ? C : next ? C+"66" : "rgba(255,255,255,0.08)",
+                  transition:"all 0.3s ease",
+                  boxShadow: done ? `0 0 6px ${C}88` : "none"
+                }}/>
+              );
+            })}
+          </div>
+
+          {/* Reps del set anterior */}
+          {setRepsLog.length > 0 && (
+            <div style={{ marginBottom:"20px", background:`${C}0d`, border:`1px solid ${C}22`, borderRadius:"12px", padding:"10px 16px", display:"inline-flex", alignItems:"baseline", gap:"8px" }}>
+              <div style={{ fontSize:"36px", color:C, lineHeight:1, fontVariantNumeric:"tabular-nums" }}>
+                {setRepsLog[setRepsLog.length - 1]}
+              </div>
+              <div style={{ fontSize:"9px", letterSpacing:"3px", color:C+"88" }}>REPS · SET ANTERIOR</div>
+            </div>
+          )}
+
+          {/* Círculo countdown */}
+          <div style={{ position:"relative", width:"180px", height:"180px", margin:"0 auto 16px" }}>
             <svg width="180" height="180" style={{ transform:"rotate(-90deg)" }}>
               <circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/>
               <circle cx="90" cy="90" r="78" fill="none" stroke={C} strokeWidth="6" strokeLinecap="round"
@@ -2669,8 +2698,26 @@ function RepCountApp() {
               <div style={{ fontSize:"10px", letterSpacing:"3px", color:"#555", marginTop:"4px" }}>REST</div>
             </div>
           </div>
+
+          {/* Botones +15 / -15 */}
+          <div style={{ display:"flex", gap:"10px", justifyContent:"center", marginBottom:"20px" }}>
+            <button onClick={() => setRestLeft(r => Math.max(3, r - 15))}
+              style={{ padding:"10px 22px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"10px", color:"#888", fontSize:"15px", letterSpacing:"2px", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>
+              −15s
+            </button>
+            <button onClick={() => setRestLeft(r => r + 15)}
+              style={{ padding:"10px 22px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"10px", color:"#888", fontSize:"15px", letterSpacing:"2px", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif" }}>
+              +15s
+            </button>
+          </div>
+
+          {/* Próximo set label */}
+          <div style={{ fontSize:"10px", letterSpacing:"3px", color:"#444", marginBottom:"14px" }}>
+            PRÓXIMO: SET {currentSet + 1} / {totalSets}
+          </div>
+
           <button onClick={() => { clearInterval(timerRef.current); setCurrentSet(cs=>cs+1); setReps(0); setActiveStep(0); setTimeLeft(duration); setScreen("counting"); playBeep("go"); }} style={{ width:"100%", padding:"16px", background:C, border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ SALTAR DESCANSO</button>
-          <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.2s" }}>ABANDONAR</button>
+          <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif" }}>ABANDONAR</button>
         </div>
       )}
 
