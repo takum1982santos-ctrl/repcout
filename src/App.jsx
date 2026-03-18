@@ -217,6 +217,17 @@ function playBeep(type = "alarm") {
     else if (type === "victory")  { whistle(0, 0.55); whistle(0.75, 0.55); whistle(1.5, 0.55); }
     // pip corto — aviso de que quedan pocos segundos
     else if (type === "warning")  { b(1480, 0, 0.08, 0.35); b(1480, 0.15, 0.08, 0.35); b(1480, 0.30, 0.08, 0.35); }
+    // ding metálico — rep contada correctamente
+    else if (type === "rep") {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "triangle"; o.frequency.value = 1800;
+      o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.5, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.65);
+    }
+    // buzz suave — rep incompleta o detección dudosa
+    else if (type === "incomplete") { b(180, 0, 0.18, 0.25, "sawtooth"); }
   } catch {}
 }
 
@@ -447,7 +458,7 @@ function preloadMoveNetScripts() {
 
 // ─── MOVENET HOOK — con smoothing, debounce y cooldown ────────────────────
 
-function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode = "user" }) {
+function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle, facingMode = "user" }) {
   const videoRef     = useRef(null);
   const keypointsRef = useRef(null);
   const phaseRef     = useRef(null);
@@ -589,11 +600,16 @@ function useMoveNet({ active, exerciseId, onRep, onStatus, onAngle, facingMode =
                       const now = Date.now();
                       if (phase === "up" && prev === "down" && (now - lastRepRef.current) > REP_COOLDOWN) {
                         lastRepRef.current = now;
+                        playBeep("rep");
                         onRep();
                       }
                     }
                   } else {
-                    // Zona neutral: limpiar historial para evitar fase "fantasma"
+                    // Zona neutral: si venía de "down" sin llegar a "up" → rep incompleta
+                    if (phaseRef.current === "down" && phaseHistRef.current.length > 0) {
+                      playBeep("incomplete");
+                    }
+                    // Limpiar historial para evitar fase "fantasma"
                     phaseHistRef.current = [];
                   }
                 } else {
@@ -647,7 +663,7 @@ function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }
   };
 
   const { videoRef, keypointsRef } = useMoveNet({
-    active, exerciseId, onRep: handleRep, onStatus: setStatus, onAngle: handleAngle, facingMode
+    active, exerciseId, onRep: handleRep, onIncomplete: () => {}, onStatus: setStatus, onAngle: handleAngle, facingMode
   });
 
   const CONNECTIONS = [
@@ -1712,34 +1728,17 @@ function RoutinesScreen({ routines, onBack, onSave, onStart }) {
                   <div style={{ fontSize:"11px", color:"#444", fontFamily:"sans-serif" }}>#{idx+1}</div>
                   <button onClick={() => removeEx(idx)} style={{ background:"none", border:"none", color:"#444", cursor:"pointer", fontSize:"16px", padding:0 }}>✕</button>
                 </div>
-                {/* Selector modo tiempo/reps */}
-                <div style={{ display:"flex", gap:"4px", marginBottom:"6px" }}>
-                  {["time","reps"].map(m => (
-                    <button key={m} onClick={() => updateEx(idx,"mode",m)}
-                      style={{ flex:1, padding:"4px", background:(item.mode||"time")===m?C2:"rgba(255,255,255,0.04)", border:`1px solid ${(item.mode||"time")===m?C2:"rgba(255,255,255,0.08)"}`, borderRadius:"6px", color:(item.mode||"time")===m?"#000":C2+"66", cursor:"pointer", fontSize:"10px", letterSpacing:"2px", fontFamily:"'Bebas Neue',sans-serif", transition:"all 0.15s" }}>
-                      {m === "time" ? "⏱ TIEMPO" : "🔢 REPS"}
-                    </button>
-                  ))}
-                </div>
                 <div style={{ display:"flex", gap:"8px" }}>
                   <div style={{ flex:1, display:"flex", alignItems:"center", gap:"4px", background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"4px 8px" }}>
                     <button onClick={() => updateEx(idx,"sets", Math.max(1, item.sets-1))} style={{ ...btnStepper, width:"28px", height:"28px" }}>−</button>
                     <div style={{ flex:1, textAlign:"center", fontSize:"14px", color:C2 }}>{item.sets} sets</div>
                     <button onClick={() => updateEx(idx,"sets", item.sets+1)} style={{ ...btnStepper, width:"28px", height:"28px" }}>+</button>
                   </div>
-                  {(item.mode||"time") === "time" ? (
-                    <div style={{ flex:1, display:"flex", alignItems:"center", gap:"4px", background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"4px 8px" }}>
-                      <button onClick={() => updateEx(idx,"duration", Math.max(15, item.duration-15))} style={{ ...btnStepper, width:"28px", height:"28px" }}>−</button>
-                      <div style={{ flex:1, textAlign:"center", fontSize:"14px", color:C2 }}>{Math.floor(item.duration/60)}:{String(item.duration%60).padStart(2,"0")}</div>
-                      <button onClick={() => updateEx(idx,"duration", item.duration+15)} style={{ ...btnStepper, width:"28px", height:"28px" }}>+</button>
-                    </div>
-                  ) : (
-                    <div style={{ flex:1, display:"flex", alignItems:"center", gap:"4px", background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"4px 8px" }}>
-                      <button onClick={() => updateEx(idx,"repsPerSet", Math.max(1, (item.repsPerSet||10)-1))} style={{ ...btnStepper, width:"28px", height:"28px" }}>−</button>
-                      <div style={{ flex:1, textAlign:"center", fontSize:"14px", color:C2 }}>{item.repsPerSet||10} reps</div>
-                      <button onClick={() => updateEx(idx,"repsPerSet", (item.repsPerSet||10)+1)} style={{ ...btnStepper, width:"28px", height:"28px" }}>+</button>
-                    </div>
-                  )}
+                  <div style={{ flex:1, display:"flex", alignItems:"center", gap:"4px", background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"4px 8px" }}>
+                    <button onClick={() => updateEx(idx,"duration", Math.max(15, item.duration-15))} style={{ ...btnStepper, width:"28px", height:"28px" }}>−</button>
+                    <div style={{ flex:1, textAlign:"center", fontSize:"14px", color:C2 }}>{Math.floor(item.duration/60)}:{String(item.duration%60).padStart(2,"0")}</div>
+                    <button onClick={() => updateEx(idx,"duration", item.duration+15)} style={{ ...btnStepper, width:"28px", height:"28px" }}>+</button>
+                  </div>
                 </div>
               </div>
             );
@@ -2082,12 +2081,8 @@ function RepCountApp() {
               setTimeout(() => {
                 setRoutineExIdx(nextIdx);
                 selectExercise(nextEx).then(() => {
-                  const nextItem = activeRoutine.exercises[nextIdx];
-                  setMode("series");
-                  setSeriesMode(nextItem.mode || "time");
-                  setDuration(nextItem.duration || 120);
-                  setRepsPerSet(nextItem.repsPerSet || 10);
-                  setTotalSets(nextItem.sets || 3);
+                  setDuration(activeRoutine.exercises[nextIdx].duration || 120);
+                  setTotalSets(activeRoutine.exercises[nextIdx].sets || 3);
                   setRestDuration(activeRoutine.restBetweenSets || 60);
                   setRestLeft(activeRoutine.restBetweenExercises || 90);
                   setSessionSaved(false);
@@ -2202,8 +2197,7 @@ function RepCountApp() {
           setTotalSets(routine.exercises[0].sets || 3);
           setRestDuration(routine.restBetweenSets || 60);
           setMode("series");
-          setSeriesMode(routine.exercises[0].mode || "time");
-          setRepsPerSet(routine.exercises[0].repsPerSet || 10);
+          setSeriesMode("time");
           selectExercise(firstEx).then(() => startSession());
           setScreen("home"); // se redirige solo al countdown
         }}
@@ -2247,18 +2241,20 @@ function RepCountApp() {
             })}
           </div>
           <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
-            {[
-              { label:"HISTORIAL", icon:"📋", screen:"history" },
-              { label:"RUTINAS",   icon:"💪", screen:"routines" },
-            ].map(b => (
-              <button key={b.screen} onClick={() => setScreen(b.screen)}
-                style={{ flex:1, padding:"12px 10px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"12px", display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", cursor:"pointer", transition:"all 0.2s" }}
-                onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
-                onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
-                <span style={{ fontSize:"14px" }}>{b.icon}</span>
-                <div style={{ fontSize:"13px", letterSpacing:"2px", color:"#555", fontFamily:"'Bebas Neue',sans-serif" }}>{b.label}</div>
-              </button>
-            ))}
+            <button onClick={() => setScreen("history")} style={{ flex:1, padding:"10px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", display:"flex", alignItems:"center", gap:"8px", cursor:"pointer", color:"#fff", transition:"all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
+              onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
+              <span style={{ fontSize:"14px" }}>📋</span>
+              <div style={{ fontSize:"12px", letterSpacing:"3px", color:"#666" }}>HISTORIAL</div>
+              <span style={{ fontSize:"12px", color:"#333", marginLeft:"auto" }}>›</span>
+            </button>
+            <button onClick={() => setScreen("routines")} style={{ flex:1, padding:"10px 16px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", display:"flex", alignItems:"center", gap:"8px", cursor:"pointer", color:"#fff", transition:"all 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.06)"}
+              onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
+              <span style={{ fontSize:"14px" }}>💪</span>
+              <div style={{ fontSize:"12px", letterSpacing:"3px", color:"#666" }}>RUTINAS</div>
+              <span style={{ fontSize:"12px", color:"#333", marginLeft:"auto" }}>›</span>
+            </button>
           </div>
 
           <div style={{ fontSize:"11px", letterSpacing:"4px", color:"#444", marginBottom:"12px" }}>EJERCICIOS</div>
