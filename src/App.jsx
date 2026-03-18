@@ -2037,6 +2037,7 @@ function RepCountApp() {
           clearInterval(timerRef.current);
           setCurrentSet(cs => cs + 1);
           setReps(0); setActiveStep(0); setTimeLeft(duration);
+          setCameraKey(k => k + 1); // remount PoseView para limpiar estado del detector
           setScreen("counting"); playBeep("go");
           return 0;
         }
@@ -2716,7 +2717,7 @@ function RepCountApp() {
             PRÓXIMO: SET {currentSet + 1} / {totalSets}
           </div>
 
-          <button onClick={() => { clearInterval(timerRef.current); setCurrentSet(cs=>cs+1); setReps(0); setActiveStep(0); setTimeLeft(duration); setScreen("counting"); playBeep("go"); }} style={{ width:"100%", padding:"16px", background:C, border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ SALTAR DESCANSO</button>
+          <button onClick={() => { clearInterval(timerRef.current); setCurrentSet(cs=>cs+1); setReps(0); setActiveStep(0); setTimeLeft(duration); setCameraKey(k => k+1); setScreen("counting"); playBeep("go"); }} style={{ width:"100%", padding:"16px", background:C, border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ SALTAR DESCANSO</button>
           <button onClick={resetApp} style={{ width:"100%", padding:"12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", color:"#444", cursor:"pointer", fontSize:"13px", letterSpacing:"3px", fontFamily:"'Bebas Neue',sans-serif" }}>ABANDONAR</button>
         </div>
       )}
@@ -2754,6 +2755,7 @@ function RepCountApp() {
               setReps(0); setActiveStep(0); setSetRepsLog([]); setCurrentSet(1);
               setTimeLeft(activeRoutine.exercises[routineExIdx].duration || 120);
               setSessionSaved(false);
+              setCameraKey(k => k + 1);
               setScreen("counting");
               playBeep("go");
             }} style={{ width:"100%", padding:"16px", background:"#FF4D4D", border:"none", borderRadius:"14px", fontSize:"18px", letterSpacing:"4px", color:"#000", cursor:"pointer", fontFamily:"'Bebas Neue',sans-serif", marginBottom:"10px" }}>⚡ EMPEZAR YA</button>
