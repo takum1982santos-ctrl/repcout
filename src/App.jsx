@@ -2712,6 +2712,36 @@ function RepCountApp() {
             </button>
           </div>
 
+          {/* Guía de respiración */}
+          {(() => {
+            const cycle = 8; // 4s inhala + 4s exhala
+            const phase = Math.floor((restLeft % cycle) / 4);
+            const isInhale = phase === 0;
+            const progress = (restLeft % 4) / 4;
+            const scale = isInhale ? 1 + (1 - progress) * 0.35 : 1 + progress * 0.35;
+            return (
+              <div style={{ marginBottom:"18px", display:"flex", flexDirection:"column", alignItems:"center", gap:"8px" }}>
+                <div style={{ fontSize:"8px", letterSpacing:"4px", color:"#333" }}>RESPIRACIÓN</div>
+                <div style={{ position:"relative", width:"70px", height:"70px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <div style={{
+                    width:"70px", height:"70px", borderRadius:"50%",
+                    background: isInhale ? `${C}18` : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${isInhale ? C+"44" : "rgba(255,255,255,0.08)"}`,
+                    transform: `scale(${scale})`,
+                    transition: "transform 0.5s ease, background 0.5s ease",
+                    boxShadow: isInhale ? `0 0 20px ${C}33` : "none",
+                  }}/>
+                  <div style={{ position:"absolute", fontSize:"8px", letterSpacing:"1px", color: isInhale ? C : "#555", transition:"color 0.5s", fontFamily:"sans-serif", fontWeight:"bold" }}>
+                    {isInhale ? "INHALÁ" : "EXHALÁ"}
+                  </div>
+                </div>
+                <div style={{ fontSize:"8px", color:"#2a2a2a", letterSpacing:"2px", fontFamily:"sans-serif" }}>
+                  {isInhale ? "por la nariz" : "por la boca"}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Próximo set label */}
           <div style={{ fontSize:"10px", letterSpacing:"3px", color:"#444", marginBottom:"14px" }}>
             PRÓXIMO: SET {currentSet + 1} / {totalSets}
