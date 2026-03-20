@@ -7,75 +7,98 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background: #090909; color: #fff; font-family: 'Courier New', monospace; min-height: 100dvh; display: flex; flex-direction: column; }
-  :root { --acc: #00FF88; }
+  :root { --acc: #00FF88; --met: #FFD700; --ali: #00CFFF; }
 
-  /* HEADER */
   #header { background: #111; border-bottom: 1px solid #1e1e1e; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
   #header h1 { font-size: 18px; letter-spacing: 5px; color: var(--acc); }
   #header p  { font-size: 9px; letter-spacing: 3px; color: #333; margin-top: 2px; }
   #statusDot { font-size: 11px; letter-spacing: 2px; color: #ff4444; }
 
-  /* CAMERA AREA */
   #camWrap { position: relative; width: 100%; background: #000; }
   #camWrap video { width: 100%; display: block; max-height: 56vw; object-fit: cover; }
-  #overlay   { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-  #flashMsg  { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-               background: rgba(0,0,0,0.8); border: 1px solid var(--acc); border-radius: 10px;
-               padding: 14px 28px; font-size: 22px; letter-spacing: 3px; color: var(--acc); white-space: nowrap; }
+  #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #flashMsg { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+              background: rgba(0,0,0,0.85); border: 1px solid var(--acc); border-radius: 10px;
+              padding: 14px 28px; font-size: 22px; letter-spacing: 3px; color: var(--acc);
+              white-space: nowrap; text-align: center; }
+  #flashMsg.countdown { font-size: 64px; letter-spacing: 0; color: #ff4444; border-color: #ff4444; }
+  #flashMsg.ready     { font-size: 26px; border-color: var(--acc); color: var(--acc); }
   #camPlaceholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
                     background: rgba(0,0,0,0.9); font-size: 11px; letter-spacing: 3px; color: #333; text-align: center; }
 
-  /* CONTROLS */
-  #controls { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  #controls { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 
-  /* EXERCISE PILLS */
-  #exRow { display: flex; gap: 8px; flex-wrap: wrap; }
-  .exBtn { flex: 1 1 calc(50% - 4px); padding: 10px 6px; background: transparent;
+  #exRow { display: flex; gap: 6px; flex-wrap: wrap; }
+  .exBtn { flex: 1 1 calc(33% - 6px); padding: 9px 4px; background: transparent;
            border: 1px solid #2a2a2a; border-radius: 10px; color: #444;
-           font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 2px;
+           font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 2px;
            cursor: pointer; transition: all 0.15s; }
   .exBtn.active { background: rgba(0,255,136,0.08); border-color: var(--acc); color: var(--acc); }
+  .exBtn[data-ex="burpee"] { flex: 1 1 100%; background: rgba(255,77,77,0.05); border-color: #ff4d4d33; color: #ff4d4d55; font-size: 10px; }
+  .exBtn[data-ex="burpee"].active { background: rgba(255,77,77,0.12); border-color: #ff4d4d; color: #ff4d4d; }
 
-  /* CAM BUTTONS */
   #camRow { display: flex; gap: 8px; }
-  #btnStart { flex: 1; padding: 13px; background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.4);
+  #btnStart { flex: 1; padding: 12px; background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.4);
               border-radius: 12px; color: var(--acc); font-family: 'Courier New',monospace;
               font-size: 12px; letter-spacing: 3px; cursor: pointer; }
-  #btnFlip  { padding: 13px 16px; background: transparent; border: 1px solid #2a2a2a;
+  #btnFlip  { padding: 12px 14px; background: transparent; border: 1px solid #2a2a2a;
               border-radius: 12px; color: #555; font-size: 18px; cursor: pointer; }
 
-  /* ANGLES */
-  #anglesBox { background: #111; border: 1px solid #1e1e1e; border-radius: 12px; padding: 12px; }
-  #anglesTitle { font-size: 8px; letter-spacing: 4px; color: #333; margin-bottom: 8px; }
-  .angleRow { display: flex; justify-content: space-between; align-items: center;
-              padding: 5px 0; border-bottom: 1px solid #161616; }
-  .angleRow:last-child { border-bottom: none; }
-  .angleName { font-size: 9px; letter-spacing: 1px; color: #444; }
-  .angleVal  { font-size: 20px; color: var(--acc); font-variant-numeric: tabular-nums; font-weight: bold; }
-  .angleConf { font-size: 8px; color: #2a2a2a; margin-left: 3px; }
-  #noDetect  { font-size: 9px; color: #222; letter-spacing: 2px; }
+  #infoFotos { font-size: 9px; letter-spacing: 3px; color: #333; text-align: center; }
 
-  /* CAPTURAR */
-  #btnCapture { width: 100%; padding: 20px; background: var(--acc); border: none; border-radius: 14px;
+  /* Paneles de datos */
+  .dataBox { border-radius: 12px; padding: 10px 12px; }
+  #anglesBox  { background: #111; border: 1px solid #1e1e1e; }
+  #metricsBox { background: #111; border: 1px solid #2a2000; }
+  #alignBox   { background: #111; border: 1px solid #002a3a; }
+
+  .boxTitle { font-size: 8px; letter-spacing: 4px; margin-bottom: 6px; }
+  #anglesTitle  { color: #333;    }
+  #metricsTitle { color: #443300; }
+  #alignTitle   { color: #003344; }
+
+  .dataRow { display: flex; justify-content: space-between; align-items: center;
+             padding: 4px 0; border-bottom: 1px solid #161616; }
+  .dataRow:last-child { border-bottom: none; }
+  .dataName { font-size: 9px; letter-spacing: 1px; }
+  .dataName.ang { color: #444; }
+  .dataName.met { color: #554400; }
+  .dataName.ali { color: #004455; }
+  .dataVal  { font-size: 16px; font-variant-numeric: tabular-nums; font-weight: bold; }
+  .dataVal.ang { color: var(--acc); font-size: 18px; }
+  .dataVal.met { color: var(--met); }
+  .dataVal.ali { color: var(--ali); }
+  .dataConf { font-size: 8px; margin-left: 3px; }
+  .dataConf.ang { color: #2a2a2a; }
+  .dataConf.met { color: #332200; }
+  .dataConf.ali { color: #002233; }
+  /* Indicador OK/WARN/BAD en alineaciones */
+  .aliTag { font-size: 8px; padding: 1px 5px; border-radius: 4px; margin-left: 5px; font-weight: bold; }
+  .aliTag.ok   { background: #00FF8822; color: #00FF88; }
+  .aliTag.warn { background: #FFD70022; color: #FFD700; }
+  .aliTag.bad  { background: #ff444422; color: #ff4444; }
+
+  #btnCapture { width: 100%; padding: 18px; background: var(--acc); border: none; border-radius: 14px;
                 color: #000; font-family: 'Courier New',monospace; font-size: 18px; letter-spacing: 5px;
                 font-weight: bold; cursor: pointer; transition: opacity 0.15s; }
   #btnCapture:disabled { opacity: 0.2; cursor: not-allowed; background: #333; }
 
-  /* GALLERY */
   #gallery { padding: 0 16px 24px; }
   #galleryTitle { font-size: 8px; letter-spacing: 5px; color: #2a2a2a; margin-bottom: 10px; }
   #galleryRow { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
-  .capCard { flex: 0 0 140px; background: #111; border: 1px solid #1e1e1e; border-radius: 10px; overflow: hidden; }
+  .capCard { flex: 0 0 155px; background: #111; border: 1px solid #1e1e1e; border-radius: 10px; overflow: hidden; }
   .capCard img { width: 100%; display: block; }
   .capInfo { padding: 8px; }
-  .capEx { font-size: 8px; letter-spacing: 2px; color: var(--acc); margin-bottom: 4px; }
-  .capAngLine { display: flex; justify-content: space-between; font-size: 8px; color: #444; }
-  .capAngLine span:last-child { color: #777; }
+  .capEx    { font-size: 8px; letter-spacing: 2px; color: var(--acc); margin-bottom: 2px; }
+  .capLabel { font-size: 7px; letter-spacing: 2px; color: #ff6644; margin-bottom: 4px; }
+  .capLine  { display: flex; justify-content: space-between; font-size: 7px; }
+  .capLine span:first-child { color: #444; }
+  .capLine span:last-child  { color: #666; }
+  .capSep   { border-top: 1px solid #1a1a1a; margin: 3px 0; }
   .btnDl { margin-top: 6px; width: 100%; padding: 6px; background: transparent;
-           border: 1px solid #222; border-radius: 6px; color: #444; font-family: 'Courier New',monospace;
-           font-size: 8px; letter-spacing: 2px; cursor: pointer; }
+           border: 1px solid #222; border-radius: 6px; color: #444;
+           font-family: 'Courier New',monospace; font-size: 8px; letter-spacing: 2px; cursor: pointer; }
 
-  /* JSON export */
   #btnExport { display: none; margin: 0 16px 8px; width: calc(100% - 32px); padding: 12px;
                background: transparent; border: 1px solid #2a2a2a; border-radius: 10px;
                color: #555; font-family: 'Courier New',monospace; font-size: 10px; letter-spacing: 3px; cursor: pointer; }
@@ -83,195 +106,459 @@
 </head>
 <body>
 
-<!-- HEADER -->
 <div id="header">
-  <div>
-    <h1>POSE CAPTURE</h1>
-    <p>REPCOUNT DIAGNOSTIC TOOL</p>
-  </div>
+  <div><h1>POSE CAPTURE</h1><p>REPCOUNT DIAGNOSTIC TOOL</p></div>
   <div id="statusDot">● INACTIVO</div>
 </div>
 
-<!-- CAMARA -->
 <div id="camWrap">
   <video id="vid" autoplay playsinline muted></video>
   <canvas id="overlay"></canvas>
-  <div id="flashMsg">📸 ¡CAPTURADO!</div>
+  <div id="flashMsg">📸</div>
   <div id="camPlaceholder">TOCÁ "INICIAR"<br/>PARA ACTIVAR LA CÁMARA</div>
 </div>
 
-<!-- CONTROLES -->
 <div id="controls">
-
-  <!-- Ejercicio -->
   <div id="exRow">
     <button class="exBtn active" data-ex="flexiones">FLEXIONES</button>
+    <button class="exBtn"        data-ex="sentadillas">SENTADILLAS</button>
     <button class="exBtn"        data-ex="zancadas">ZANCADAS</button>
     <button class="exBtn"        data-ex="dominadas">DOMINADAS</button>
     <button class="exBtn"        data-ex="dips">DIPS</button>
+    <button class="exBtn"        data-ex="burpee">⚡ BURPEE (6 PASOS)</button>
   </div>
 
-  <!-- Iniciar / Flip -->
+  <div id="infoFotos">3 FOTOS · COUNTDOWN 10s</div>
+
   <div id="camRow">
     <button id="btnStart">▶ INICIAR CÁMARA</button>
-    <button id="btnFlip" title="Cambiar cámara">🔄</button>
+    <button id="btnFlip">🔄</button>
   </div>
 
-  <!-- Ángulos en vivo -->
-  <div id="anglesBox">
-    <div id="anglesTitle">ÁNGULOS EN VIVO</div>
-    <div id="noDetect">— sin detección —</div>
+  <!-- Ángulos (verde) -->
+  <div id="anglesBox" class="dataBox">
+    <div id="anglesTitle" class="boxTitle">ÁNGULOS EN VIVO</div>
+    <div style="font-size:9px;color:#222;letter-spacing:2px">— sin detección —</div>
   </div>
 
-  <!-- CAPTURAR -->
+  <!-- Métricas pies/manos (amarillo) -->
+  <div id="metricsBox" class="dataBox">
+    <div id="metricsTitle" class="boxTitle">MÉTRICAS · PIES &amp; MANOS</div>
+    <div style="font-size:9px;color:#221100;letter-spacing:2px">— sin detección —</div>
+  </div>
+
+  <!-- Alineaciones / planos (cyan) -->
+  <div id="alignBox" class="dataBox">
+    <div id="alignTitle" class="boxTitle">PLANOS DE ALINEACIÓN</div>
+    <div style="font-size:9px;color:#001122;letter-spacing:2px">— sin detección —</div>
+  </div>
+
   <button id="btnCapture" disabled>📸 CAPTURAR</button>
-
 </div>
 
-<!-- EXPORT JSON -->
 <button id="btnExport">↓ EXPORTAR DATOS JSON</button>
 
-<!-- GALERÍA -->
 <div id="gallery" style="display:none">
   <div id="galleryTitle">CAPTURAS</div>
   <div id="galleryRow"></div>
 </div>
 
-
-<!-- ─── SCRIPTS ──────────────────────────────────────────────────────── -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 <script>
-// ── Config ───────────────────────────────────────────────────────────────
+// ── Audio ─────────────────────────────────────────────────────────────────
+function playWhistle(dur = 0.15) {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    const lfo = ac.createOscillator(), lg = ac.createGain();
+    lfo.frequency.value = 10; lfo.type = "sine";
+    lg.gain.value = 14; lfo.connect(lg); lg.connect(o.frequency);
+    o.frequency.value = 3100; o.type = "sine";
+    o.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(0, ac.currentTime);
+    g.gain.linearRampToValueAtTime(0.5, ac.currentTime + 0.02);
+    g.gain.setValueAtTime(0.45, ac.currentTime + dur - 0.04);
+    g.gain.linearRampToValueAtTime(0, ac.currentTime + dur);
+    lfo.start(ac.currentTime); lfo.stop(ac.currentTime + dur + 0.05);
+    o.start(ac.currentTime);   o.stop(ac.currentTime + dur + 0.05);
+  } catch(e) {}
+}
+
+// ── Keypoints MoveNet ─────────────────────────────────────────────────────
+// 0=nariz  1=ojo_i  2=ojo_d  3=oreja_i  4=oreja_d
+// 5=hombro_i  6=hombro_d  7=codo_i  8=codo_d  9=muñeca_i  10=muñeca_d
+// 11=cadera_i 12=cadera_d 13=rodilla_i 14=rodilla_d 15=tobillo_i 16=tobillo_d
 const KP = {
   leftShoulder:5, rightShoulder:6,
   leftElbow:7,    rightElbow:8,
   leftWrist:9,    rightWrist:10,
   leftHip:11,     rightHip:12,
   leftKnee:13,    rightKnee:14,
-  leftAnkle:15,   rightAnkle:16
+  leftAnkle:15,   rightAnkle:16,
 };
+
 const BONES = [
   [5,6],[5,7],[7,9],[6,8],[8,10],
   [5,11],[6,12],[11,12],
-  [11,13],[13,15],[12,14],[14,16]
+  [11,13],[13,15],[12,14],[14,16],
 ];
+
+// ── ÁNGULOS por ejercicio ─────────────────────────────────────────────────
 const EXERCISE_ANGLES = {
   flexiones: [
-    { name:"Codo Izq",    pts:[KP.leftShoulder,  KP.leftElbow,   KP.leftWrist]  },
-    { name:"Codo Der",    pts:[KP.rightShoulder, KP.rightElbow,  KP.rightWrist] },
-    { name:"Hombro Izq",  pts:[KP.leftElbow,     KP.leftShoulder,KP.leftHip]    },
-    { name:"Hombro Der",  pts:[KP.rightElbow,    KP.rightShoulder,KP.rightHip]  },
-    { name:"Cadera",      pts:[KP.leftShoulder,  KP.leftHip,     KP.leftKnee]   },
+    { name:"Codo Izq",   pts:[KP.leftShoulder,  KP.leftElbow,    KP.leftWrist]   },
+    { name:"Codo Der",   pts:[KP.rightShoulder, KP.rightElbow,   KP.rightWrist]  },
+    { name:"Hombro Izq", pts:[KP.leftElbow,     KP.leftShoulder, KP.leftHip]     },
+    { name:"Hombro Der", pts:[KP.rightElbow,    KP.rightShoulder,KP.rightHip]    },
+    { name:"Cadera",     pts:[KP.leftShoulder,  KP.leftHip,      KP.leftKnee]    },
+  ],
+  sentadillas: [
+    { name:"Rodilla Izq",pts:[KP.leftHip,       KP.leftKnee,     KP.leftAnkle]   },
+    { name:"Rodilla Der",pts:[KP.rightHip,      KP.rightKnee,    KP.rightAnkle]  },
+    { name:"Cadera Izq", pts:[KP.leftShoulder,  KP.leftHip,      KP.leftKnee]    },
+    { name:"Cadera Der", pts:[KP.rightShoulder, KP.rightHip,     KP.rightKnee]   },
   ],
   zancadas: [
-    { name:"Rodilla Izq", pts:[KP.leftHip,  KP.leftKnee,  KP.leftAnkle]  },
-    { name:"Rodilla Der", pts:[KP.rightHip, KP.rightKnee, KP.rightAnkle] },
-    { name:"Cadera Izq",  pts:[KP.leftShoulder, KP.leftHip, KP.leftKnee]  },
-    { name:"Cadera Der",  pts:[KP.rightShoulder,KP.rightHip,KP.rightKnee] },
+    { name:"Rodilla Izq",pts:[KP.leftHip,       KP.leftKnee,     KP.leftAnkle]   },
+    { name:"Rodilla Der",pts:[KP.rightHip,      KP.rightKnee,    KP.rightAnkle]  },
+    { name:"Cadera Izq", pts:[KP.leftShoulder,  KP.leftHip,      KP.leftKnee]    },
+    { name:"Cadera Der", pts:[KP.rightShoulder, KP.rightHip,     KP.rightKnee]   },
   ],
   dominadas: [
-    { name:"Codo Izq",   pts:[KP.leftShoulder,  KP.leftElbow,  KP.leftWrist]  },
-    { name:"Codo Der",   pts:[KP.rightShoulder, KP.rightElbow, KP.rightWrist] },
-    { name:"Hombro Izq", pts:[KP.leftElbow,     KP.leftShoulder,KP.leftHip]   },
-    { name:"Hombro Der", pts:[KP.rightElbow,    KP.rightShoulder,KP.rightHip] },
+    { name:"Codo Izq",   pts:[KP.leftShoulder,  KP.leftElbow,    KP.leftWrist]   },
+    { name:"Codo Der",   pts:[KP.rightShoulder, KP.rightElbow,   KP.rightWrist]  },
+    { name:"Hombro Izq", pts:[KP.leftElbow,     KP.leftShoulder, KP.leftHip]     },
+    { name:"Hombro Der", pts:[KP.rightElbow,    KP.rightShoulder,KP.rightHip]    },
   ],
   dips: [
-    { name:"Codo Izq",   pts:[KP.leftShoulder,  KP.leftElbow,  KP.leftWrist]  },
-    { name:"Codo Der",   pts:[KP.rightShoulder, KP.rightElbow, KP.rightWrist] },
-    { name:"Hombro Izq", pts:[KP.leftElbow,     KP.leftShoulder,KP.leftHip]   },
-    { name:"Hombro Der", pts:[KP.rightElbow,    KP.rightShoulder,KP.rightHip] },
-    { name:"Cadera",     pts:[KP.leftShoulder,  KP.leftHip,    KP.leftKnee]   },
-  ]
+    { name:"Codo Izq",   pts:[KP.leftShoulder,  KP.leftElbow,    KP.leftWrist]   },
+    { name:"Codo Der",   pts:[KP.rightShoulder, KP.rightElbow,   KP.rightWrist]  },
+    { name:"Hombro Izq", pts:[KP.leftElbow,     KP.leftShoulder, KP.leftHip]     },
+    { name:"Hombro Der", pts:[KP.rightElbow,    KP.rightShoulder,KP.rightHip]    },
+    { name:"Cadera",     pts:[KP.leftShoulder,  KP.leftHip,      KP.leftKnee]    },
+  ],
+  burpee: [
+    { name:"Cadera Izq", pts:[KP.leftShoulder,  KP.leftHip,      KP.leftKnee]    },
+    { name:"Cadera Der", pts:[KP.rightShoulder, KP.rightHip,     KP.rightKnee]   },
+    { name:"Rodilla Izq",pts:[KP.leftHip,       KP.leftKnee,     KP.leftAnkle]   },
+    { name:"Rodilla Der",pts:[KP.rightHip,      KP.rightKnee,    KP.rightAnkle]  },
+    { name:"Codo Izq",   pts:[KP.leftShoulder,  KP.leftElbow,    KP.leftWrist]   },
+    { name:"Codo Der",   pts:[KP.rightShoulder, KP.rightElbow,   KP.rightWrist]  },
+  ],
 };
 
+// ── MÉTRICAS de pies y manos ──────────────────────────────────────────────
+function shoulderWidth(kps) {
+  const l = kps[KP.leftShoulder], r = kps[KP.rightShoulder];
+  if (!l || !r || l.score < 0.2 || r.score < 0.2) return null;
+  return Math.abs(l.x - r.x) || 1;
+}
+function cmin(kps, ...ids) { return Math.min(...ids.map(i => kps[i]?.score ?? 0)); }
+
+function metAnkleSep(kps) {
+  const sw = shoulderWidth(kps);
+  const la = kps[KP.leftAnkle], ra = kps[KP.rightAnkle];
+  if (!sw || !la || !ra) return null;
+  const conf = cmin(kps, KP.leftAnkle, KP.rightAnkle);
+  if (conf < 0.2) return null;
+  return { name:"Sep. Pies", value: +(Math.abs(la.x - ra.x) / sw).toFixed(2),
+           unit:"×hombros", conf: Math.round(conf*100), note:"0=juntos 1=hombros >1=abiertos" };
+}
+
+function metAnkleAsym(kps, frameH) {
+  const la = kps[KP.leftAnkle], ra = kps[KP.rightAnkle];
+  if (!la || !ra) return null;
+  const conf = cmin(kps, KP.leftAnkle, KP.rightAnkle);
+  if (conf < 0.2) return null;
+  return { name:"Asim. Pies", value: +(Math.abs(la.y - ra.y) / (frameH || 480)).toFixed(3),
+           unit:"norm", conf: Math.round(conf*100), note:"0=simétrico >0.05=zancada/salto" };
+}
+
+function metAnkleHeight(kps) {
+  const useL = kps[KP.leftHip]  && kps[KP.leftAnkle]  && cmin(kps,KP.leftHip, KP.leftAnkle) >= 0.2;
+  const useR = kps[KP.rightHip] && kps[KP.rightAnkle] && cmin(kps,KP.rightHip,KP.rightAnkle)>= 0.2;
+  if (!useL && !useR) return null;
+  const hip  = useL ? kps[KP.leftHip].y   : kps[KP.rightHip].y;
+  const ank  = useL ? kps[KP.leftAnkle].y : kps[KP.rightAnkle].y;
+  const conf = useL ? cmin(kps,KP.leftHip,KP.leftAnkle) : cmin(kps,KP.rightHip,KP.rightAnkle);
+  return { name:"Alt. Tobillo/Cad.", value: +(ank/(hip||1)).toFixed(2),
+           unit:"ratio", conf: Math.round(conf*100), note:"~1.6 parado, >2 plancha, <1.2 salto" };
+}
+
+function metWristSep(kps) {
+  const sw = shoulderWidth(kps);
+  const lw = kps[KP.leftWrist], rw = kps[KP.rightWrist];
+  if (!sw || !lw || !rw) return null;
+  const conf = cmin(kps, KP.leftWrist, KP.rightWrist);
+  if (conf < 0.2) return null;
+  return { name:"Sep. Muñecas", value: +(Math.abs(lw.x - rw.x) / sw).toFixed(2),
+           unit:"×hombros", conf: Math.round(conf*100), note:"1=hombros, >1=ancho, <1=cerrado" };
+}
+
+function metWristHeight(kps) {
+  const sw = shoulderWidth(kps);
+  const useL = kps[KP.leftShoulder]  && kps[KP.leftWrist]  && cmin(kps,KP.leftShoulder, KP.leftWrist) >= 0.2;
+  const useR = kps[KP.rightShoulder] && kps[KP.rightWrist] && cmin(kps,KP.rightShoulder,KP.rightWrist)>= 0.2;
+  if (!useL && !useR || !sw) return null;
+  const shY  = useL ? kps[KP.leftShoulder].y  : kps[KP.rightShoulder].y;
+  const wrY  = useL ? kps[KP.leftWrist].y     : kps[KP.rightWrist].y;
+  const conf = useL ? cmin(kps,KP.leftShoulder,KP.leftWrist) : cmin(kps,KP.rightShoulder,KP.rightWrist);
+  return { name:"Alt. Muñeca/Hombro", value: +((wrY-shY)/sw).toFixed(2),
+           unit:"×hombros", conf: Math.round(conf*100), note:"neg=manos arriba, pos=manos abajo" };
+}
+
+const EXERCISE_METRICS = {
+  flexiones:   [metAnkleSep, metAnkleHeight, metWristSep, metWristHeight],
+  sentadillas: [metAnkleSep, metAnkleAsym,   metAnkleHeight],
+  zancadas:    [metAnkleSep, metAnkleAsym,   metAnkleHeight],
+  dominadas:   [metAnkleSep, metAnkleHeight, metWristSep, metWristHeight],
+  dips:        [metAnkleSep, metAnkleHeight, metWristSep, metWristHeight],
+  burpee:      [metAnkleSep, metAnkleAsym,   metAnkleHeight, metWristSep, metWristHeight],
+};
+
+// ── PLANOS DE ALINEACIÓN ──────────────────────────────────────────────────
+// Todos los valores de desviación están normalizados por longitud del segmento
+// (punto-a-línea / longitud_línea) → 0 = alineado perfecto
+
+// Helper: distancia de punto P a la línea definida por A→B, normalizada por |AB|
+function ptToLineNorm(A, B, P) {
+  const dx = B.x - A.x, dy = B.y - A.y;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 1) return 0;
+  return Math.abs((P.x - A.x)*dy - (P.y - A.y)*dx) / (len * len);
+}
+
+// Elegir el mejor lado disponible (mayor confianza mínima)
+function bestSide(kps, leftIds, rightIds) {
+  const cl = cmin(kps, ...leftIds);
+  const cr = cmin(kps, ...rightIds);
+  if (cl < 0.2 && cr < 0.2) return null;
+  return cl >= cr ? { ids: leftIds, conf: cl } : { ids: rightIds, conf: cr };
+}
+
+// ── Alineación lateral: hombro-cadera-tobillo ────────────────────────────
+// Qué tan recta es la línea del cuerpo de costado
+// Useful: flexiones (plancha), burpee, dominadas (columna), dips
+// Umbrales: <0.03 bueno, 0.03-0.08 atención, >0.08 mal
+function aliLateral(kps) {
+  const side = bestSide(kps,
+    [KP.leftShoulder,  KP.leftHip,  KP.leftAnkle],
+    [KP.rightShoulder, KP.rightHip, KP.rightAnkle]
+  );
+  if (!side) return null;
+  const [sIdx, hIdx, aIdx] = side.ids;
+  const sh = kps[sIdx], hi = kps[hIdx], an = kps[aIdx];
+  const dev = ptToLineNorm(sh, an, hi);
+  return {
+    name: "Lateral Homb-Cad-Tobillo",
+    value: +dev.toFixed(3), unit: "norm", conf: Math.round(side.conf * 100),
+    status: dev < 0.03 ? "ok" : dev < 0.08 ? "warn" : "bad",
+    note: "0=recto, >0.03=cadera desviada, >0.08=mala plancha",
+    // Puntos para dibujar en canvas
+    drawPts: [{ x:sh.x, y:sh.y }, { x:hi.x, y:hi.y }, { x:an.x, y:an.y }],
+    type: "lateral"
+  };
+}
+
+// ── Alineación frontal: hombro-cadera-rodilla-tobillo ─────────────────────
+// Qué tan vertical es el eje del cuerpo de frente
+// Useful: sentadillas, zancadas (detecta varo/valgo de rodilla)
+// Umbrales: <0.03 bueno, 0.03-0.06 atención, >0.06 mal
+function aliFrontal(kps) {
+  const side = bestSide(kps,
+    [KP.leftShoulder,  KP.leftHip,  KP.leftKnee,  KP.leftAnkle],
+    [KP.rightShoulder, KP.rightHip, KP.rightKnee, KP.rightAnkle]
+  );
+  if (!side) return null;
+  const [sIdx, hIdx, kIdx, aIdx] = side.ids;
+  const sh = kps[sIdx], hi = kps[hIdx], kn = kps[kIdx], an = kps[aIdx];
+  // Línea de referencia: hombro a tobillo
+  const devHip  = ptToLineNorm(sh, an, hi);
+  const devKnee = ptToLineNorm(sh, an, kn);
+  // RMS de desviaciones
+  const rms = +Math.sqrt((devHip**2 + devKnee**2) / 2).toFixed(3);
+  return {
+    name: "Frontal Homb-Cad-Rod-Tobillo",
+    value: rms, unit: "norm", conf: Math.round(side.conf * 100),
+    status: rms < 0.03 ? "ok" : rms < 0.06 ? "warn" : "bad",
+    note: "0=eje recto, >0.03=leve desviación, >0.06=rodilla/cadera fuera",
+    drawPts: [{ x:sh.x, y:sh.y }, { x:hi.x, y:hi.y }, { x:kn.x, y:kn.y }, { x:an.x, y:an.y }],
+    type: "frontal"
+  };
+}
+
+// ── Nivel horizontal de hombros ──────────────────────────────────────────
+// Diferencia vertical hombro izq vs der, normalizada por ancho de hombros
+// Umbrales: <0.04 bueno, 0.04-0.10 atención, >0.10 mal
+function aliShoulderLevel(kps) {
+  const ls = kps[KP.leftShoulder], rs = kps[KP.rightShoulder];
+  if (!ls || !rs || Math.min(ls.score, rs.score) < 0.2) return null;
+  const sw   = Math.abs(ls.x - rs.x) || 1;
+  const diff = +( Math.abs(ls.y - rs.y) / sw ).toFixed(3);
+  const conf = Math.round(Math.min(ls.score, rs.score) * 100);
+  return {
+    name: "Nivel Hombros",
+    value: diff, unit: "norm", conf,
+    status: diff < 0.04 ? "ok" : diff < 0.10 ? "warn" : "bad",
+    note: "0=nivelados, >0.04=inclinación, >0.10=muy inclinado",
+    drawPts: [{ x:ls.x, y:ls.y }, { x:rs.x, y:rs.y }],
+    type: "level"
+  };
+}
+
+// ── Nivel horizontal de caderas ──────────────────────────────────────────
+// Misma lógica que hombros
+// Umbrales: <0.04 bueno, 0.04-0.10 atención, >0.10 mal
+function aliHipLevel(kps) {
+  const lh = kps[KP.leftHip], rh = kps[KP.rightHip];
+  if (!lh || !rh || Math.min(lh.score, rh.score) < 0.2) return null;
+  const sw   = shoulderWidth(kps) || Math.abs(lh.x - rh.x) || 1;
+  const diff = +( Math.abs(lh.y - rh.y) / sw ).toFixed(3);
+  const conf = Math.round(Math.min(lh.score, rh.score) * 100);
+  return {
+    name: "Nivel Caderas",
+    value: diff, unit: "norm", conf,
+    status: diff < 0.04 ? "ok" : diff < 0.10 ? "warn" : "bad",
+    note: "0=niveladas, >0.04=inclinación lateral",
+    drawPts: [{ x:lh.x, y:lh.y }, { x:rh.x, y:rh.y }],
+    type: "level"
+  };
+}
+
+// ── Alineación hombro-cadera (columna lateral) ────────────────────────────
+// Qué tan recta está la columna vista de lado (hombro sobre cadera)
+// Useful: dominadas (no arquear), dips, plancha
+// Umbrales: <0.05 bueno, 0.05-0.12 atención, >0.12 mal
+function aliSpine(kps) {
+  const useL = cmin(kps, KP.leftShoulder,  KP.leftHip)  >= 0.2;
+  const useR = cmin(kps, KP.rightShoulder, KP.rightHip) >= 0.2;
+  if (!useL && !useR) return null;
+  const sh = useL ? kps[KP.leftShoulder]  : kps[KP.rightShoulder];
+  const hi = useL ? kps[KP.leftHip]       : kps[KP.rightHip];
+  const conf = useL ? cmin(kps,KP.leftShoulder,KP.leftHip) : cmin(kps,KP.rightShoulder,KP.rightHip);
+  // Desplazamiento horizontal relativo a distancia vertical
+  const vertDist = Math.abs(sh.y - hi.y) || 1;
+  const horizDev = +( Math.abs(sh.x - hi.x) / vertDist ).toFixed(3);
+  return {
+    name: "Columna (Hombro/Cad.)",
+    value: horizDev, unit: "norm", conf: Math.round(conf*100),
+    status: horizDev < 0.05 ? "ok" : horizDev < 0.12 ? "warn" : "bad",
+    note: "0=columna vertical, >0.05=inclinación, >0.12=muy arqueado",
+    drawPts: [{ x:sh.x, y:sh.y }, { x:hi.x, y:hi.y }],
+    type: "spine"
+  };
+}
+
+// Mapa de alineaciones por ejercicio
+const EXERCISE_ALIGN = {
+  flexiones:   [aliLateral, aliShoulderLevel, aliHipLevel],
+  sentadillas: [aliFrontal, aliShoulderLevel, aliHipLevel],
+  zancadas:    [aliFrontal, aliShoulderLevel, aliHipLevel],
+  dominadas:   [aliSpine,   aliShoulderLevel, aliHipLevel],
+  dips:        [aliLateral, aliSpine, aliShoulderLevel],
+  burpee:      [aliLateral, aliFrontal, aliShoulderLevel, aliHipLevel],
+};
+
+// ── Fotos por ejercicio ───────────────────────────────────────────────────
+const EXERCISE_PHOTOS = {
+  flexiones:   { count:3, labels:["ARRIBA",    "ABAJO",       "ARRIBA 2"]    },
+  sentadillas: { count:3, labels:["DE PIE",    "ABAJO",       "ABAJO PROF"]  },
+  zancadas:    { count:3, labels:["DE PIE",    "ABAJO IZQ",   "ABAJO DER"]   },
+  dominadas:   { count:3, labels:["COLGADO",   "SUBIENDO",    "ARRIBA"]      },
+  dips:        { count:3, labels:["ARRIBA",    "ABAJO",       "ARRIBA 2"]    },
+  burpee:      { count:6, labels:["1-DE PIE","2-AGACHADO","3-PLANCHA","4-FLEX ABAJO","5-FLEX ARRIBA","6-DE PIE"] },
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// TODO (futuro): módulo para agregar ejercicios dinámicamente desde la UI.
+// Estructura esperada por ejercicio personalizado:
+//   { id, name, angles:[...], metrics:[...], align:[...], photos:{ count, labels } }
+// Se guardará en localStorage y se mergeará con los objetos de config anteriores.
+// ─────────────────────────────────────────────────────────────────────────
+
 function calcAngle(A, B, C) {
-  const ab = { x: A[0]-B[0], y: A[1]-B[1] };
-  const cb = { x: C[0]-B[0], y: C[1]-B[1] };
+  const ab = { x:A[0]-B[0], y:A[1]-B[1] };
+  const cb = { x:C[0]-B[0], y:C[1]-B[1] };
   const dot   = ab.x*cb.x + ab.y*cb.y;
   const cross = Math.abs(ab.x*cb.y - ab.y*cb.x);
   return Math.round(Math.atan2(cross, dot) * 180 / Math.PI);
 }
 
-// ── Estado ───────────────────────────────────────────────────────────────
-let detector   = null;
-let stream     = null;
-let rafId      = null;
-let status     = "idle";   // idle | loading | active | error
-let exercise   = "flexiones";
-let camFacing  = "user";
-let lastAngles = [];
-let captures   = [];
+// ── Estado ────────────────────────────────────────────────────────────────
+let detector    = null;
+let stream      = null;
+let rafId       = null;
+let status      = "idle";
+let exercise    = "flexiones";
+let camFacing   = "user";
+let lastAngles  = [];
+let lastMetrics = [];
+let lastAlign   = [];
+let captures    = [];
 
-// ── Elementos DOM ────────────────────────────────────────────────────────
-const vid         = document.getElementById("vid");
-const canvas      = document.getElementById("overlay");
-const ctx         = canvas.getContext("2d");
-const statusDot   = document.getElementById("statusDot");
-const placeholder = document.getElementById("camPlaceholder");
-const flashMsg    = document.getElementById("flashMsg");
-const anglesBox   = document.getElementById("anglesBox");
-const noDetect    = document.getElementById("noDetect");
-const btnCapture  = document.getElementById("btnCapture");
-const btnStart    = document.getElementById("btnStart");
-const btnFlip     = document.getElementById("btnFlip");
-const btnExport   = document.getElementById("btnExport");
-const galleryDiv  = document.getElementById("gallery");
-const galleryRow  = document.getElementById("galleryRow");
+const vid        = document.getElementById("vid");
+const canvas     = document.getElementById("overlay");
+const ctx        = canvas.getContext("2d");
+const statusDot  = document.getElementById("statusDot");
+const placeholder= document.getElementById("camPlaceholder");
+const flashMsg   = document.getElementById("flashMsg");
+const anglesBox  = document.getElementById("anglesBox");
+const metricsBox = document.getElementById("metricsBox");
+const alignBox   = document.getElementById("alignBox");
+const btnCapture = document.getElementById("btnCapture");
+const btnStart   = document.getElementById("btnStart");
+const btnFlip    = document.getElementById("btnFlip");
+const btnExport  = document.getElementById("btnExport");
+const galleryDiv = document.getElementById("gallery");
+const galleryRow = document.getElementById("galleryRow");
+const infoFotos  = document.getElementById("infoFotos");
 
-// ── Selección de ejercicio ───────────────────────────────────────────────
+// ── Selección ejercicio ───────────────────────────────────────────────────
 document.querySelectorAll(".exBtn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".exBtn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     exercise = btn.dataset.ex;
-    lastAngles = [];
-    renderAngles([]);
+    lastAngles = []; lastMetrics = []; lastAlign = [];
+    renderAngles([]); renderMetrics([]); renderAlign([]);
+    const cfg = EXERCISE_PHOTOS[exercise] || { count:3 };
+    infoFotos.textContent = `${cfg.count} FOTOS · COUNTDOWN 10s`;
   });
 });
 
-// ── Cambiar estado UI ────────────────────────────────────────────────────
+// ── Estado UI ─────────────────────────────────────────────────────────────
 function setStatus(s) {
   status = s;
   const labels = { idle:"● INACTIVO", loading:"● CARGANDO...", active:"● ACTIVO", error:"● ERROR" };
   const colors  = { idle:"#ff4444", loading:"#FFD700", active:"#00FF88", error:"#ff4444" };
-  statusDot.textContent = labels[s];
-  statusDot.style.color  = colors[s];
+  statusDot.textContent = labels[s]; statusDot.style.color = colors[s];
   placeholder.style.display = s === "active" ? "none" : "flex";
   if (s === "loading") placeholder.innerHTML = "CARGANDO MOVENET...<br/><small style='font-size:9px;color:#555'>puede tardar 10-20 seg</small>";
   if (s === "error")   placeholder.innerHTML = "ERROR DE CÁMARA<br/><small style='font-size:9px;color:#555'>verificá permisos en Chrome</small>";
   if (s === "idle")    placeholder.innerHTML = "TOCÁ \"INICIAR\"<br/>PARA ACTIVAR LA CÁMARA";
-  btnCapture.disabled = s !== "active";
+  btnCapture.disabled  = s !== "active";
   btnStart.textContent = s === "active" ? "↺ REINICIAR" : "▶ INICIAR CÁMARA";
 }
 
-// ── Iniciar cámara + detector ────────────────────────────────────────────
+// ── Cámara + detector ─────────────────────────────────────────────────────
 async function startCamera() {
   setStatus("loading");
   try {
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (rafId)  cancelAnimationFrame(rafId);
-
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: camFacing, width: { ideal: 640 }, height: { ideal: 480 } },
-      audio: false
+      video:{ facingMode:camFacing, width:{ ideal:640 }, height:{ ideal:480 } }, audio:false
     });
-    vid.srcObject = stream;
-    await vid.play();
-
+    vid.srcObject = stream; await vid.play();
     if (!detector) {
       detector = await poseDetection.createDetector(
         poseDetection.SupportedModels.MoveNet,
         { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
       );
     }
-
-    setStatus("active");
-    loop();
-  } catch(e) {
-    console.error(e);
-    setStatus("error");
-  }
+    setStatus("active"); loop();
+  } catch(e) { console.error(e); setStatus("error"); }
 }
 
 btnStart.addEventListener("click", startCamera);
@@ -280,73 +567,141 @@ btnFlip.addEventListener("click", () => {
   if (status === "active") startCamera();
 });
 
-// ── Loop detección ───────────────────────────────────────────────────────
+// ── Loop ──────────────────────────────────────────────────────────────────
 async function loop() {
   if (status !== "active") return;
   try {
     if (vid.readyState >= 2) {
-      // Sincronizar tamaño canvas con video
       if (canvas.width !== vid.videoWidth || canvas.height !== vid.videoHeight) {
-        canvas.width  = vid.videoWidth  || 640;
-        canvas.height = vid.videoHeight || 480;
+        canvas.width = vid.videoWidth || 640; canvas.height = vid.videoHeight || 480;
       }
       const poses = await detector.estimatePoses(vid);
       if (poses.length > 0) {
         const kps = poses[0].keypoints;
-        drawSkeleton(kps);
-        const angles = getAngles(kps);
-        lastAngles = angles;
-        renderAngles(angles);
+        lastAngles  = getAngles(kps);
+        lastMetrics = getMetrics(kps, canvas.height);
+        lastAlign   = getAlign(kps);
+        drawAll(kps, lastAlign);
+        renderAngles(lastAngles);
+        renderMetrics(lastMetrics);
+        renderAlign(lastAlign);
       }
     }
-  } catch(e) { /* ignorar frame fallido */ }
+  } catch(e) {}
   rafId = requestAnimationFrame(loop);
 }
 
-// ── Dibujar esqueleto ────────────────────────────────────────────────────
-function drawSkeleton(kps) {
+// ── Dibujar todo ──────────────────────────────────────────────────────────
+function alignColor(status) {
+  return status === "ok" ? "#00FF88" : status === "warn" ? "#FFD700" : "#ff4444";
+}
+
+function drawAll(kps, alignData) {
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
 
+  // ── Planos de alineación (detrás del esqueleto) ───────────────────────
+  alignData.forEach(a => {
+    if (!a.drawPts || a.drawPts.length < 2) return;
+    const pts = a.drawPts;
+    const col = alignColor(a.status);
+
+    if (a.type === "lateral" || a.type === "frontal") {
+      // Línea de referencia entre primer y último punto (ideal)
+      const first = pts[0], last = pts[pts.length - 1];
+      ctx.beginPath(); ctx.moveTo(first.x, first.y); ctx.lineTo(last.x, last.y);
+      ctx.strokeStyle = col + "55"; ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+      // Línea de desviación perpendicular desde cada punto intermedio a la línea
+      const dx = last.x - first.x, dy = last.y - first.y;
+      const len2 = dx*dx + dy*dy || 1;
+      pts.slice(1, -1).forEach(pt => {
+        // Proyección del punto sobre la línea
+        const t = ((pt.x - first.x)*dx + (pt.y - first.y)*dy) / len2;
+        const projX = first.x + t*dx, projY = first.y + t*dy;
+        ctx.beginPath(); ctx.moveTo(pt.x, pt.y); ctx.lineTo(projX, projY);
+        ctx.strokeStyle = col + "cc"; ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+        // Punto proyectado
+        ctx.beginPath(); ctx.arc(projX, projY, 4, 0, Math.PI*2);
+        ctx.fillStyle = col + "88"; ctx.fill();
+      });
+
+    } else if (a.type === "level") {
+      // Línea horizontal entre los dos puntos + nivel ideal
+      const midY = (pts[0].y + pts[1].y) / 2;
+      // Línea ideal (horizontal)
+      ctx.beginPath(); ctx.moveTo(pts[0].x, midY); ctx.lineTo(pts[1].x, midY);
+      ctx.strokeStyle = col + "44"; ctx.lineWidth = 1;
+      ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+      // Línea real
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y);
+      ctx.strokeStyle = col + "99"; ctx.lineWidth = 2;
+      ctx.stroke();
+
+    } else if (a.type === "spine") {
+      // Línea vertical ideal y línea real
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[0].x, pts[1].y);
+      ctx.strokeStyle = col + "44"; ctx.lineWidth = 1;
+      ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); ctx.lineTo(pts[1].x, pts[1].y);
+      ctx.strokeStyle = col + "99"; ctx.lineWidth = 2; ctx.stroke();
+    }
+  });
+
+  // ── Esqueleto ─────────────────────────────────────────────────────────
   BONES.forEach(([i,j]) => {
     const a = kps[i], b = kps[j];
     if (!a || !b || a.score < 0.3 || b.score < 0.3) return;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = "rgba(0,255,136,0.55)";
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = "rgba(0,255,136,0.55)"; ctx.lineWidth = 2.5; ctx.stroke();
   });
 
-  kps.forEach(kp => {
+  // Puntos: tobillos amarillo, muñecas naranja, resto verde
+  kps.forEach((kp, i) => {
     if (!kp || kp.score < 0.3) return;
-    ctx.beginPath();
-    ctx.arc(kp.x, kp.y, 5, 0, Math.PI*2);
-    ctx.fillStyle = "#00FF88";
-    ctx.fill();
+    const isFoot  = i === KP.leftAnkle  || i === KP.rightAnkle;
+    const isWrist = i === KP.leftWrist  || i === KP.rightWrist;
+    const r     = (isFoot || isWrist) ? 8 : 5;
+    const color = isFoot ? "#FFD700" : isWrist ? "#FF8C00" : "#00FF88";
+    ctx.beginPath(); ctx.arc(kp.x, kp.y, r*1.8, 0, Math.PI*2);
+    ctx.fillStyle = color + "33"; ctx.fill();
+    ctx.beginPath(); ctx.arc(kp.x, kp.y, r, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
   });
 
-  // Ángulos dibujados
-  const defs = EXERCISE_ANGLES[exercise] || [];
-  defs.forEach(({ pts }) => {
+  // Ángulos sobre articulaciones
+  (EXERCISE_ANGLES[exercise] || []).forEach(({ pts }) => {
     const [a,b,c] = pts;
     const A = kps[a], B = kps[b], C = kps[c];
     if (!A||!B||!C || Math.min(A.score,B.score,C.score) < 0.25) return;
     const val = calcAngle([A.x,A.y],[B.x,B.y],[C.x,C.y]);
-    ctx.font = "bold 14px monospace";
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 3;
+    ctx.font = "bold 13px monospace";
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
     ctx.strokeText(val+"°", B.x+6, B.y-6);
     ctx.fillStyle = "#00FF88";
     ctx.fillText(val+"°", B.x+6, B.y-6);
   });
+
+  // Línea punteada tobillos (amarilla) y muñecas (naranja)
+  const la = kps[KP.leftAnkle], ra = kps[KP.rightAnkle];
+  if (la && ra && la.score >= 0.25 && ra.score >= 0.25) {
+    ctx.beginPath(); ctx.moveTo(la.x, la.y); ctx.lineTo(ra.x, ra.y);
+    ctx.strokeStyle = "rgba(255,215,0,0.4)"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  const lw = kps[KP.leftWrist], rw = kps[KP.rightWrist];
+  if (lw && rw && lw.score >= 0.25 && rw.score >= 0.25) {
+    ctx.beginPath(); ctx.moveTo(lw.x, lw.y); ctx.lineTo(rw.x, rw.y);
+    ctx.strokeStyle = "rgba(255,140,0,0.4)"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
 }
 
-// ── Calcular ángulos ─────────────────────────────────────────────────────
+// ── Calcular ángulos ──────────────────────────────────────────────────────
 function getAngles(kps) {
-  const defs = EXERCISE_ANGLES[exercise] || [];
-  return defs.map(({ name, pts }) => {
+  return (EXERCISE_ANGLES[exercise] || []).map(({ name, pts }) => {
     const [a,b,c] = pts;
     const A = kps[a], B = kps[b], C = kps[c];
     if (!A||!B||!C) return { name, value:null, conf:0 };
@@ -356,75 +711,128 @@ function getAngles(kps) {
   });
 }
 
-// ── Renderizar ángulos en panel ──────────────────────────────────────────
-function renderAngles(angles) {
-  // Limpia pero deja el título
-  const title = document.getElementById("anglesTitle");
-  anglesBox.innerHTML = "";
-  anglesBox.appendChild(title);
+// ── Calcular métricas ─────────────────────────────────────────────────────
+function getMetrics(kps, frameH) {
+  return (EXERCISE_METRICS[exercise] || []).map(fn => fn(kps, frameH)).filter(Boolean);
+}
 
+// ── Calcular alineaciones ─────────────────────────────────────────────────
+function getAlign(kps) {
+  return (EXERCISE_ALIGN[exercise] || []).map(fn => fn(kps)).filter(Boolean);
+}
+
+// ── Render ángulos ────────────────────────────────────────────────────────
+function renderAngles(angles) {
+  const title = document.getElementById("anglesTitle");
+  anglesBox.innerHTML = ""; anglesBox.appendChild(title);
   if (!angles || angles.length === 0) {
-    anglesBox.innerHTML += '<div id="noDetect" style="font-size:9px;color:#222;letter-spacing:2px">— sin detección —</div>';
-    return;
+    anglesBox.innerHTML += '<div style="font-size:9px;color:#222;letter-spacing:2px">— sin detección —</div>'; return;
   }
   angles.forEach(a => {
-    const row = document.createElement("div");
-    row.className = "angleRow";
-    row.innerHTML = `
-      <div class="angleName">${a.name}</div>
-      <div>
-        <span class="angleVal">${a.value !== null ? a.value+"°" : "—"}</span>
-        ${a.conf > 0 ? `<span class="angleConf">${a.conf}%</span>` : ""}
-      </div>`;
+    const row = document.createElement("div"); row.className = "dataRow";
+    row.innerHTML = `<div class="dataName ang">${a.name}</div>
+      <div><span class="dataVal ang">${a.value !== null ? a.value+"°" : "—"}</span>
+      ${a.conf > 0 ? `<span class="dataConf ang">${a.conf}%</span>` : ""}</div>`;
     anglesBox.appendChild(row);
   });
 }
 
-// ── CAPTURAR con countdown 3s + 3 fotos ──────────────────────────────────
+// ── Render métricas ───────────────────────────────────────────────────────
+function renderMetrics(metrics) {
+  const title = document.getElementById("metricsTitle");
+  metricsBox.innerHTML = ""; metricsBox.appendChild(title);
+  if (!metrics || metrics.length === 0) {
+    metricsBox.innerHTML += '<div style="font-size:9px;color:#221100;letter-spacing:2px">— sin detección —</div>'; return;
+  }
+  metrics.forEach(m => {
+    const row = document.createElement("div"); row.className = "dataRow";
+    row.innerHTML = `<div class="dataName met">${m.name}</div>
+      <div><span class="dataVal met">${m.value}</span>
+      <span class="dataConf met">&nbsp;${m.unit}&nbsp;${m.conf}%</span></div>`;
+    metricsBox.appendChild(row);
+  });
+}
+
+// ── Render alineaciones ───────────────────────────────────────────────────
+function renderAlign(aligns) {
+  const title = document.getElementById("alignTitle");
+  alignBox.innerHTML = ""; alignBox.appendChild(title);
+  if (!aligns || aligns.length === 0) {
+    alignBox.innerHTML += '<div style="font-size:9px;color:#001122;letter-spacing:2px">— sin detección —</div>'; return;
+  }
+  aligns.forEach(a => {
+    const row = document.createElement("div"); row.className = "dataRow";
+    const tagColor = { ok:"#00FF88", warn:"#FFD700", bad:"#ff4444" }[a.status] || "#888";
+    const tagText  = { ok:"OK", warn:"⚠", bad:"✕" }[a.status] || "?";
+    row.innerHTML = `<div class="dataName ali">${a.name}</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="dataVal ali">${a.value}</span>
+        <span class="dataConf ali">${a.unit}</span>
+        <span class="aliTag" style="background:${tagColor}22;color:${tagColor}">${tagText}</span>
+      </div>`;
+    alignBox.appendChild(row);
+  });
+}
+
+// ── Snapshot ──────────────────────────────────────────────────────────────
 function takeSnapshot(label) {
   const tmp = document.createElement("canvas");
-  tmp.width  = canvas.width  || 640;
-  tmp.height = canvas.height || 480;
+  tmp.width = canvas.width || 640; tmp.height = canvas.height || 480;
   const tctx = tmp.getContext("2d");
   tctx.drawImage(vid, 0, 0, tmp.width, tmp.height);
   tctx.drawImage(canvas, 0, 0);
   const imgData = tmp.toDataURL("image/jpeg", 0.92);
-  const capData = { timestamp: new Date().toISOString(), exercise, angles: lastAngles, label };
+  const capData = {
+    timestamp: new Date().toISOString(),
+    exercise, label,
+    angles:  lastAngles,
+    metrics: lastMetrics,
+    align:   lastAlign.map(a => ({
+      name: a.name, value: a.value, unit: a.unit,
+      status: a.status, conf: a.conf, note: a.note
+    })),
+  };
   captures.unshift({ imgData, data: capData, id: Date.now() });
   renderGallery();
+  playWhistle(0.13);
+  flashMsg.className = "ready";
   flashMsg.textContent = "📸 " + label;
   flashMsg.style.display = "block";
-  setTimeout(() => flashMsg.style.display = "none", 700);
+  setTimeout(() => flashMsg.style.display = "none", 900);
 }
 
+// ── Capturar con countdown 10s ────────────────────────────────────────────
 btnCapture.addEventListener("click", () => {
   if (btnCapture.disabled) return;
   btnCapture.disabled = true;
-  let count = 3;
+  const cfg = EXERCISE_PHOTOS[exercise] || { count:3, labels:[] };
+  const totalPhotos = cfg.count;
+  const photoLabels = cfg.labels;
+  let count = 10;
 
-  // Countdown 3... 2... 1...
-  flashMsg.textContent = count + "...";
-  flashMsg.style.display = "block";
+  flashMsg.className = "countdown";
+  flashMsg.style.color = ""; flashMsg.style.borderColor = "";
+  flashMsg.textContent = count; flashMsg.style.display = "block";
 
-  const countdown = setInterval(() => {
+  const iv = setInterval(() => {
     count--;
     if (count > 0) {
-      flashMsg.textContent = count + "...";
+      flashMsg.textContent = count;
+      if (count <= 3) {
+        playWhistle(count === 1 ? 0.35 : 0.15);
+        flashMsg.style.color = "#ff4444"; flashMsg.style.borderColor = "#ff4444";
+      }
     } else {
-      clearInterval(countdown);
-      flashMsg.style.display = "none";
-
-      // Foto 1
-      takeSnapshot("FOTO 1/3");
-      setTimeout(() => {
-        // Foto 2
-        takeSnapshot("FOTO 2/3");
-        setTimeout(() => {
-          // Foto 3
-          takeSnapshot("FOTO 3/3 ✓");
-          btnCapture.disabled = false;
-        }, 1000);
-      }, 1000);
+      clearInterval(iv); flashMsg.style.display = "none";
+      let idx = 0;
+      function shootNext() {
+        if (idx >= totalPhotos) { btnCapture.disabled = false; return; }
+        const lbl = photoLabels[idx] ? `${photoLabels[idx]} (${idx+1}/${totalPhotos})` : `FOTO ${idx+1}/${totalPhotos}`;
+        takeSnapshot(lbl); idx++;
+        if (idx < totalPhotos) setTimeout(shootNext, 1400);
+        else btnCapture.disabled = false;
+      }
+      shootNext();
     }
   }, 1000);
 });
@@ -434,45 +842,42 @@ function renderGallery() {
   galleryDiv.style.display = captures.length > 0 ? "block" : "none";
   btnExport.style.display  = captures.length > 0 ? "block" : "none";
   galleryRow.innerHTML = "";
-
   captures.forEach(cap => {
-    const card = document.createElement("div");
-    card.className = "capCard";
-    const angLines = cap.data.angles
-      .filter(a => a.value !== null)
-      .map(a => `<div class="capAngLine"><span>${a.name}</span><span>${a.value}°</span></div>`)
-      .join("");
-    card.innerHTML = `
-      <img src="${cap.imgData}" alt=""/>
+    const card = document.createElement("div"); card.className = "capCard";
+    const angLines = cap.data.angles.filter(a => a.value !== null)
+      .map(a => `<div class="capLine"><span>${a.name}</span><span>${a.value}°</span></div>`).join("");
+    const metLines = (cap.data.metrics || [])
+      .map(m => `<div class="capLine"><span style="color:#443300">${m.name}</span><span style="color:#886600">${m.value}</span></div>`).join("");
+    const aliLines = (cap.data.align || [])
+      .map(a => {
+        const c = { ok:"#00FF88", warn:"#FFD700", bad:"#ff4444" }[a.status] || "#555";
+        return `<div class="capLine"><span style="color:#003344">${a.name}</span><span style="color:${c}">${a.value} ${a.status==="ok"?"✓":a.status==="warn"?"⚠":"✕"}</span></div>`;
+      }).join("");
+    card.innerHTML = `<img src="${cap.imgData}" alt=""/>
       <div class="capInfo">
         <div class="capEx">${cap.data.exercise.toUpperCase()}</div>
+        <div class="capLabel">${cap.data.label}</div>
         ${angLines}
+        ${metLines ? `<div class="capSep"></div>${metLines}` : ""}
+        ${aliLines ? `<div class="capSep"></div>${aliLines}` : ""}
         <button class="btnDl" data-id="${cap.id}">↓ GUARDAR IMG</button>
       </div>`;
     galleryRow.appendChild(card);
   });
-
-  // Botones descargar imagen
   document.querySelectorAll(".btnDl").forEach(btn => {
     btn.addEventListener("click", () => {
-      const cap = captures.find(c => c.id == btn.dataset.id);
-      if (!cap) return;
+      const cap = captures.find(c => c.id == btn.dataset.id); if (!cap) return;
       const a = document.createElement("a");
-      a.href = cap.imgData;
-      a.download = `repcount_${cap.data.exercise}_${cap.id}.jpg`;
-      a.click();
+      a.href = cap.imgData; a.download = `repcount_${cap.data.exercise}_${cap.id}.jpg`; a.click();
     });
   });
 }
 
 // ── Exportar JSON ─────────────────────────────────────────────────────────
 btnExport.addEventListener("click", () => {
-  const allData = captures.map(c => c.data);
-  const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(captures.map(c => c.data), null, 2)], { type:"application/json" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `repcount_poses_${Date.now()}.json`;
-  a.click();
+  a.href = URL.createObjectURL(blob); a.download = `repcount_poses_${Date.now()}.json`; a.click();
 });
 </script>
 </body>
