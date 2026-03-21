@@ -26,8 +26,9 @@ const categories = [
   {
     id: "fullbody", name: "Full Body", icon: "🔥", color: "#FF4D4D",
     exercises: [
-      { id: "burpee_sin_salto", name: "Burpee Sin Salto", steps: 6, icon: "⚡", color: "#FF4D4D", desc: "6 pasos · sin impacto final" },
-      { id: "burpee_con_salto", name: "Burpee Con Salto", steps: 7, icon: "🚀", color: "#FF2222", desc: "7 pasos · versión completa" },
+      { id: "burpee_sin_salto", name: "Burpee Sin Salto",  steps: 6, icon: "⚡", color: "#FF4D4D", desc: "6 pasos · sin impacto final" },
+      { id: "burpee_con_salto", name: "Burpee Con Salto",  steps: 7, icon: "🚀", color: "#FF2222", desc: "7 pasos · versión completa" },
+      { id: "jumping_jacks",    name: "Jumping Jacks",     steps: 2, icon: "🌟", color: "#FF6B6B", desc: "Pies + brazos · cardio" },
     ],
   },
   {
@@ -35,23 +36,33 @@ const categories = [
     exercises: [
       { id: "flexiones",          name: "Flexiones",           steps: 2, icon: "💪", color: "#FF8C00", desc: "Agarre normal · pecho" },
       { id: "flexiones_diamante", name: "Flexiones Diamante",  steps: 2, icon: "💎", color: "#FF8C00", desc: "Agarre cerrado · tríceps" },
+      { id: "pike_pushup",        name: "Pike Pushup",         steps: 2, icon: "🔺", color: "#FF8C00", desc: "Cadera alta · hombros" },
       { id: "dips",               name: "Dips",                steps: 2, icon: "🔽", color: "#FF8C00", desc: "Fondos · tríceps y pecho" },
     ],
   },
   {
     id: "tiron", name: "Tirón", icon: "🏋️", color: "#6C63FF",
     exercises: [
-      { id: "dominadas_ancho",   name: "Dominadas Ancho",   steps: 2, icon: "🏋️", color: "#6C63FF", desc: "Agarre ancho · espalda" },
-      { id: "dominadas_cerrado", name: "Dominadas Cerrado", steps: 2, icon: "🤜", color: "#6C63FF", desc: "Agarre cerrado · bíceps" },
-      { id: "dominadas_neutro",  name: "Dominadas Neutro",  steps: 2, icon: "🤲", color: "#6C63FF", desc: "Agarre neutro · completo" },
+      { id: "dominadas",        name: "Dominadas",        steps: 2, icon: "🏋️", color: "#6C63FF", desc: "Agarre ancho · espalda" },
+      { id: "dominada_supina",  name: "Dominada Supina",  steps: 2, icon: "💪", color: "#8B5CF6", desc: "Chin-up · bíceps dominante" },
+      { id: "dominada_neutra",  name: "Dominada Neutra",  steps: 2, icon: "🤲", color: "#7C3AED", desc: "Agarre neutro · completo" },
+      { id: "remo_australiano", name: "Remo Australiano", steps: 2, icon: "📐", color: "#5B21B6", desc: "Barra baja · espalda media" },
     ],
   },
   {
     id: "piernas", name: "Piernas", icon: "🦵", color: "#00C9A7",
     exercises: [
-      { id: "sentadillas",          name: "Sentadillas",           steps: 2, icon: "🦵", color: "#00C9A7", desc: "Bilateral · cuádriceps" },
-      { id: "zancadas",             name: "Zancadas",              steps: 2, icon: "🚶", color: "#00C9A7", desc: "Alternadas · glúteos" },
-      { id: "sentadilla_una_pierna",name: "Sentadilla Una Pierna", steps: 2, icon: "🦾", color: "#00C9A7", desc: "Pistol squat · avanzado" },
+      { id: "sentadillas",           name: "Sentadillas",           steps: 2, icon: "🦵", color: "#00C9A7", desc: "Bilateral · cuádriceps" },
+      { id: "zancadas",              name: "Zancadas",              steps: 2, icon: "🚶", color: "#00C9A7", desc: "Alternadas · glúteos" },
+      { id: "sissy_squat",           name: "Sissy Squat",           steps: 2, icon: "⚡", color: "#06B6D4", desc: "Rodillas adelante · cuádriceps" },
+      { id: "sentadilla_una_pierna", name: "Sentadilla Una Pierna", steps: 2, icon: "🦾", color: "#00C9A7", desc: "Pistol squat · avanzado" },
+    ],
+  },
+  {
+    id: "hold", name: "Isométrico", icon: "🧘", color: "#F59E0B",
+    exercises: [
+      { id: "plancha", name: "Plancha", steps: 1, icon: "⏱", color: "#F59E0B", desc: "Hold · core y alineación", holdMode: true },
+      // TODO: agregar L-sit, hollow body, wall sit, etc.
     ],
   },
 ];
@@ -62,15 +73,20 @@ const exercises = categories.flatMap(c => c.exercises);
 const exerciseSteps = {
   burpee_sin_salto:       ["De pie","Agachado","Plancha","Flex abajo","Flex arriba","De pie"],
   burpee_con_salto:       ["De pie","Agachado","Plancha","Flex abajo","Flex arriba","De pie","Salto"],
+  jumping_jacks:          ["Juntos","Abierto"],
   flexiones:              ["Arriba","Abajo"],
   flexiones_diamante:     ["Arriba","Abajo"],
+  pike_pushup:            ["Arriba","Abajo"],
   dips:                   ["Arriba","Abajo"],
-  dominadas_ancho:        ["Abajo","Arriba"],
-  dominadas_cerrado:      ["Abajo","Arriba"],
-  dominadas_neutro:       ["Abajo","Arriba"],
+  dominadas:              ["Abajo","Arriba"],
+  dominada_supina:        ["Abajo","Arriba"],
+  dominada_neutra:        ["Abajo","Arriba"],
+  remo_australiano:       ["Abajo","Arriba"],
   sentadillas:            ["De pie","Abajo"],
   zancadas:               ["De pie","Abajo"],
+  sissy_squat:            ["De pie","Abajo"],
   sentadilla_una_pierna:  ["De pie","Abajo"],
+  plancha:                ["HOLD"],
 };
 
 // Sugerencias por ejercicio { sets, reps (por set en modo series), duration (min libre), rest (seg) }
@@ -78,15 +94,20 @@ const exerciseSteps = {
 const exerciseDefaults = {
   burpee_sin_salto:       { sets:3, duration:300, rest:90 },
   burpee_con_salto:       { sets:3, duration:300, rest:90 },
+  jumping_jacks:          { sets:3, duration:60,  rest:30 },
   flexiones:              { sets:4, duration:480, rest:60 },
   flexiones_diamante:     { sets:3, duration:360, rest:60 },
+  pike_pushup:            { sets:3, duration:300, rest:60 },
   dips:                   { sets:3, duration:360, rest:60 },
-  dominadas_ancho:        { sets:4, duration:300, rest:90 },
-  dominadas_cerrado:      { sets:4, duration:300, rest:90 },
-  dominadas_neutro:       { sets:4, duration:300, rest:90 },
+  dominadas:              { sets:4, duration:300, rest:90 },
+  dominada_supina:        { sets:4, duration:300, rest:90 },
+  dominada_neutra:        { sets:4, duration:300, rest:90 },
+  remo_australiano:       { sets:4, duration:300, rest:60 },
   sentadillas:            { sets:4, duration:480, rest:45 },
   zancadas:               { sets:3, duration:420, rest:45 },
+  sissy_squat:            { sets:3, duration:300, rest:60 },
   sentadilla_una_pierna:  { sets:3, duration:300, rest:60 },
+  plancha:                { sets:3, duration:60,  rest:60 }, // duración = meta de hold en segundos
 };
 
 
@@ -97,19 +118,7 @@ const exerciseDefaults = {
 const STORAGE_KEY    = "repcount-history";
 
 // ─── MENSAJES MILITARES ─────────────────────────────────────────────────────
-const MSG_SET = [
-  "SET COMPLETADO. DESCANSÁ COMO SOLDADO, NO COMO COBARDE.",
-  "UN SET MÁS CAÍDO. LA GUERRA NO TERMINÓ.",
-  "¿DUELE? BIEN. SIGNIFICA QUE ESTÁS TRABAJANDO.",
-  "SET DESTRUIDO. PREPARATE PARA EL PRÓXIMO.",
-  "ESO ES DISCIPLINA. EL QUE AFLOJA PIERDE.",
-  "EJECUTADO. SIN QUEJAS. SIN EXCUSAS.",
-  "LO QUE NO TE MATA TE HACE MÁS FUERTE. SIGUIENTE.",
-  "DESCANSÁ. DESPUÉS SEGUÍS PELEANDO.",
-  "BUEN TRABAJO, SOLDADO. NO TE DUERMAS.",
-];
-
-const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+// TODO: mensajes motivacionales — pendiente de rediseño
 const PR_KEY         = "repcount-prs";
 const ROUTINES_KEY         = "repcount-routines";
 const WORKOUT_ROUTINES_KEY = "repcount-workout-routines";
@@ -149,21 +158,21 @@ const FAKE_HISTORY = [
   { id:"f1",  date:daysAgo(0),  exerciseId:"burpee_con_salto",     totalReps:28, sets:[8,10,10],  duration:5, rest:60, mode:"series" },
   { id:"f2",  date:daysAgo(0),  exerciseId:"flexiones",             totalReps:45, sets:[],         duration:8, rest:0,  mode:"libre", elapsed:480 },
   { id:"f3",  date:daysAgo(1),  exerciseId:"burpee_sin_salto",      totalReps:35, sets:[10,12,13], duration:5, rest:60, mode:"series" },
-  { id:"f4",  date:daysAgo(1),  exerciseId:"dominadas_ancho",       totalReps:18, sets:[6,6,6],    duration:3, rest:90, mode:"series" },
+  { id:"f4",  date:daysAgo(1),  exerciseId:"dominadas",          totalReps:18, sets:[6,6,6],    duration:3, rest:90, mode:"series" },
   { id:"f5",  date:daysAgo(1),  exerciseId:"sentadillas",           totalReps:60, sets:[20,20,20], duration:5, rest:45, mode:"series" },
   { id:"f6",  date:daysAgo(2),  exerciseId:"flexiones_diamante",    totalReps:24, sets:[8,8,8],    duration:4, rest:60, mode:"series" },
   { id:"f7",  date:daysAgo(2),  exerciseId:"burpee_con_salto",      totalReps:22, sets:[7,8,7],    duration:5, rest:60, mode:"series" },
-  { id:"f8",  date:daysAgo(4),  exerciseId:"dominadas_cerrado",     totalReps:15, sets:[5,5,5],    duration:3, rest:90, mode:"series" },
+  { id:"f8",  date:daysAgo(4),  exerciseId:"dominada_supina",    totalReps:15, sets:[5,5,5],    duration:3, rest:90, mode:"series" },
   { id:"f9",  date:daysAgo(4),  exerciseId:"dips",                  totalReps:36, sets:[12,12,12], duration:4, rest:60, mode:"series" },
   { id:"f10", date:daysAgo(4),  exerciseId:"zancadas",              totalReps:40, sets:[],         duration:6, rest:0,  mode:"libre", elapsed:360 },
   { id:"f11", date:daysAgo(5),  exerciseId:"burpee_sin_salto",      totalReps:30, sets:[10,10,10], duration:5, rest:60, mode:"series" },
   { id:"f12", date:daysAgo(5),  exerciseId:"flexiones",             totalReps:50, sets:[15,18,17], duration:5, rest:45, mode:"series" },
   { id:"f13", date:daysAgo(7),  exerciseId:"burpee_con_salto",      totalReps:32, sets:[10,11,11], duration:5, rest:60, mode:"series" },
-  { id:"f14", date:daysAgo(7),  exerciseId:"dominadas_neutro",      totalReps:12, sets:[4,4,4],    duration:3, rest:90, mode:"series" },
+  { id:"f14", date:daysAgo(7),  exerciseId:"dominada_neutra",    totalReps:12, sets:[4,4,4],    duration:3, rest:90, mode:"series" },
   { id:"f15", date:daysAgo(7),  exerciseId:"sentadilla_una_pierna", totalReps:10, sets:[5,5],      duration:4, rest:60, mode:"series" },
   { id:"f16", date:daysAgo(10), exerciseId:"burpee_sin_salto",      totalReps:25, sets:[8,9,8],    duration:5, rest:60, mode:"series" },
   { id:"f17", date:daysAgo(10), exerciseId:"flexiones",             totalReps:38, sets:[12,13,13], duration:4, rest:45, mode:"series" },
-  { id:"f18", date:daysAgo(10), exerciseId:"dominadas_ancho",       totalReps:21, sets:[7,7,7],    duration:3, rest:90, mode:"series" },
+  { id:"f18", date:daysAgo(10), exerciseId:"dominadas",          totalReps:21, sets:[7,7,7],    duration:3, rest:90, mode:"series" },
 ];
 
 async function seedFakeHistory() {
@@ -273,15 +282,20 @@ function getPose(exerciseId, stepIndex) {
   const map = {
     burpee_sin_salto:       ["standing","squat_down","plank","pushup_down","plank","standing"],
     burpee_con_salto:       ["standing","squat_down","plank","pushup_down","plank","standing","jump"],
+    jumping_jacks:          ["standing","jump"],
     flexiones:              ["plank","pushup_down"],
     flexiones_diamante:     ["plank","pushup_down"],
+    pike_pushup:            ["plank","pushup_down"],  // mismo mock, diferente detector
     dips:                   ["standing","squat_down"],
-    dominadas_ancho:        ["standing","pullup_up"],
-    dominadas_cerrado:      ["standing","pullup_up"],
-    dominadas_neutro:       ["standing","pullup_up"],
+    dominadas:              ["standing","pullup_up"],
+    dominada_supina:        ["standing","pullup_up"],
+    dominada_neutra:        ["standing","pullup_up"],
+    remo_australiano:       ["plank","pushup_down"],  // cuerpo inclinado similar a plancha
     sentadillas:            ["standing","squat_down"],
     zancadas:               ["standing","squat_down"],
+    sissy_squat:            ["standing","squat_down"],
     sentadilla_una_pierna:  ["standing","squat_down"],
+    plancha:                ["plank"],
   };
   const key = map[exerciseId]?.[stepIndex] || "standing";
   return POSES[key];
@@ -330,7 +344,7 @@ const REP_DETECTORS = {
     if (notPlank) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
-    return { angle: Math.round(a), phase: a < 90 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
+    return { angle: Math.round(a), phase: a < 90 ? "down" : a > 140 ? "up" : null, conf: L ? cL : cR };
   },
   flexiones_diamante: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
@@ -342,7 +356,7 @@ const REP_DETECTORS = {
     if (notPlank2) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
-    return { angle: Math.round(a), phase: a < 85 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
+    return { angle: Math.round(a), phase: a < 85 ? "down" : a > 140 ? "up" : null, conf: L ? cL : cR };
   },
   dips: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
@@ -391,9 +405,22 @@ const REP_DETECTORS = {
     const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
     return { angle: Math.round(a), phase: a < 95 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
   },
+  // ── PIKE PUSHUP: codo + cadera alta ──────────────────────────────────────
+  pike_pushup: (kps) => {
+    const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
+    const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
+    if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    const shdY = (kps[5][1] + kps[6][1]) / 2;
+    const hipY = (kps[11][1] + kps[12][1]) / 2;
+    // En pike: cadera por encima del hombro (hipY < shdY en pantalla donde Y crece hacia abajo)
+    if ((shdY - hipY) < 30) return { angle: null, phase: null, conf: 0 };
+    const L = cL >= cR;
+    const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
+    return { angle: Math.round(a), phase: a < 90 ? "down" : a > 140 ? "up" : null, conf: L ? cL : cR };
+  },
   // ── TIRÓN: ángulo de codo (mejor que posición Y) ─────────────────────────
   // Codo doblado (<90°) = arriba; codo extendido (>155°) = abajo
-  dominadas_ancho: (kps) => {
+  dominadas: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
@@ -401,7 +428,7 @@ const REP_DETECTORS = {
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 90 ? "up" : a > 155 ? "down" : null, conf: L ? cL : cR };
   },
-  dominadas_cerrado: (kps) => {
+  dominada_supina: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
@@ -409,13 +436,80 @@ const REP_DETECTORS = {
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 90 ? "up" : a > 155 ? "down" : null, conf: L ? cL : cR };
   },
-  dominadas_neutro: (kps) => {
+  dominada_neutra: (kps) => {
     const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
     const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
     const L = cL >= cR;
     const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
     return { angle: Math.round(a), phase: a < 90 ? "up" : a > 155 ? "down" : null, conf: L ? cL : cR };
+  },
+  // ── REMO AUSTRALIANO: codo + verificación cuerpo inclinado ───────────────
+  // El cuerpo queda casi horizontal tirando de una barra baja.
+  // Cuerpo inclinado: shdY ≈ hipY (alineados horizontalmente como en plancha pero invertido)
+  remo_australiano: (kps) => {
+    const cL = Math.min(kps[5][2], kps[7][2], kps[9][2]);
+    const cR = Math.min(kps[6][2], kps[8][2], kps[10][2]);
+    if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    const shdY = (kps[5][1] + kps[6][1]) / 2;
+    const hipY = (kps[11][1] + kps[12][1]) / 2;
+    // En remo australiano el cuerpo está inclinado: hombro y cadera a altura similar
+    const isInclined = Math.abs(hipY - shdY) < 120;
+    if (!isInclined) return { angle: null, phase: null, conf: 0 };
+    const L = cL >= cR;
+    const a = L ? calcAngle(kps[5], kps[7], kps[9]) : calcAngle(kps[6], kps[8], kps[10]);
+    return { angle: Math.round(a), phase: a < 90 ? "up" : a > 150 ? "down" : null, conf: L ? cL : cR };
+  },
+  // ── SISSY SQUAT: ángulo de rodilla muy agudo + cadera extendida ──────────
+  // Las rodillas van muy adelante, ángulo de rodilla ~50-70° en el punto más bajo
+  sissy_squat: (kps) => {
+    const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
+    const cR = Math.min(kps[12][2], kps[14][2], kps[16][2]);
+    if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    const L = cL >= cR;
+    const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
+    // Rango más agudo que sentadilla normal: abajo <75°, arriba >155°
+    return { angle: Math.round(a), phase: a < 75 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
+  },
+  // ── JUMPING JACKS: posición de pies y muñecas ───────────────────────────
+  // Fase "abajo": pies juntos + manos bajas (junto al cuerpo)
+  // Fase "arriba": pies separados + manos arriba (por encima de hombros)
+  jumping_jacks: (kps) => {
+    const cAnk = Math.min(kps[15][2], kps[16][2]);
+    const cWri = Math.min(kps[9][2],  kps[10][2]);
+    if (cAnk < MIN_CONF && cWri < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    // Separación de tobillos normalizada por ancho de hombros
+    const shdW = Math.abs(kps[5][0] - kps[6][0]) || 80;
+    const ankSep = Math.abs(kps[15][0] - kps[16][0]) / shdW;
+    // Altura de muñecas relativa a hombros (Y crece hacia abajo)
+    const shdY  = (kps[5][1] + kps[6][1]) / 2;
+    const wriY  = (kps[9][1]  + kps[10][1]) / 2;
+    const wriUp = shdY - wriY; // positivo = muñecas por encima de hombros
+    const conf  = Math.max(cAnk, cWri);
+    // "up": pies separados (>0.7×hombros) Y manos arriba
+    // "down": pies juntos (<0.4×hombros) O manos bajas
+    const phase = (ankSep > 0.7 && wriUp > 20) ? "up"
+                : (ankSep < 0.4 || wriUp < -20) ? "down"
+                : null;
+    return { angle: Math.round(ankSep * 100), phase, conf };
+  },
+  // ── PLANCHA HOLD: modo isométrico — detecta pose correcta ────────────────
+  // No cuenta reps, sostiene un timer mientras la alineación es válida.
+  // La lógica de hold se maneja en el componente, acá solo devuelve si la pose es válida.
+  plancha: (kps) => {
+    const cL = Math.min(kps[5][2], kps[11][2], kps[15][2]);
+    const cR = Math.min(kps[6][2], kps[12][2], kps[16][2]);
+    if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
+    const shdY = (kps[5][1] + kps[6][1]) / 2;
+    const hipY = (kps[11][1] + kps[12][1]) / 2;
+    const ankY = (kps[15][1] + kps[16][1]) / 2;
+    // Alineación: hombro, cadera y tobillo deben estar a altura similar (cuerpo horizontal)
+    const bodyLen = Math.abs(ankY - shdY) || 1;
+    const hipDev  = Math.abs(hipY - (shdY + ankY) / 2) / bodyLen;
+    // hipDev < 0.1 = plancha buena; > 0.15 = cadera caída o levantada
+    const isValid = hipDev < 0.15;
+    const L = cL >= cR;
+    return { angle: Math.round(hipDev * 100), phase: isValid ? "up" : null, conf: L ? cL : cR };
   },
   // ── BURPEES: ángulo de cadera (hombro-cadera-rodilla) ────────────────────
   // Cuerpo recto (de pie) = >160°; agachado/plancha = <110°
@@ -674,17 +768,22 @@ function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }
 
   // Joints a resaltar según ejercicio
   const HIGHLIGHT_JOINTS = {
-    flexiones:          [[5,7,9],[6,8,10]],
-    flexiones_diamante: [[5,7,9],[6,8,10]],
-    dips:               [[5,7,9],[6,8,10]],
-    sentadillas:        [[11,13,15],[12,14,16]],
-    zancadas:           [[11,13,15],[12,14,16]],
+    flexiones:             [[5,7,9],[6,8,10]],
+    flexiones_diamante:    [[5,7,9],[6,8,10]],
+    pike_pushup:           [[5,7,9],[6,8,10]],
+    dips:                  [[5,7,9],[6,8,10]],
+    dominadas:             [[5,7,9],[6,8,10]],
+    dominada_supina:       [[5,7,9],[6,8,10]],
+    dominada_neutra:       [[5,7,9],[6,8,10]],
+    remo_australiano:      [[5,7,9],[6,8,10]],
+    sentadillas:           [[11,13,15],[12,14,16]],
+    zancadas:              [[11,13,15],[12,14,16]],
+    sissy_squat:           [[11,13,15],[12,14,16]],
     sentadilla_una_pierna: [[11,13,15],[12,14,16]],
-    dominadas_ancho:    [[5,7,9],[6,8,10]],
-    dominadas_cerrado:  [[5,7,9],[6,8,10]],
-    dominadas_neutro:   [[5,7,9],[6,8,10]],
-    burpee_sin_salto:   [[5,11,13],[6,12,14]],
-    burpee_con_salto:   [[5,11,13],[6,12,14]],
+    jumping_jacks:         [[15,16],[9,10]],   // tobillos + muñecas
+    burpee_sin_salto:      [[5,11,13],[6,12,14]],
+    burpee_con_salto:      [[5,11,13],[6,12,14]],
+    plancha:               [[5,11,15],[6,12,16]], // hombro-cadera-tobillo
   };
 
   useEffect(() => {
@@ -1871,19 +1970,8 @@ function RepCountApp() {
   const prShownRef                       = useRef(false); // evita closure stale
   const [prBroken, setPrBroken]          = useState(false);
   const [prBadgeTimer, setPrBadgeTimer]  = useState(null);
-  const [motivoMsg, setMotivoMsg]        = useState("");
-  const [motivoVisible, setMotivoVisible] = useState(false);
-  const motivoTimerRef = useRef(null);
-
   const timerRef = useRef(null);
   const spinRef  = useRef(null);
-
-  const showMotivo = (msg) => {
-    if (motivoTimerRef.current) clearTimeout(motivoTimerRef.current);
-    setMotivoMsg(msg);
-    setMotivoVisible(true);
-    motivoTimerRef.current = setTimeout(() => setMotivoVisible(false), 3000);
-  };
 
   // Sembrar datos de prueba la primera vez
   useEffect(() => {
@@ -1991,7 +2079,7 @@ function RepCountApp() {
               const nl = [...log, cr];
               setCurrentSet(cs => {
                 if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
-                else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); showMotivo(rand(MSG_SET)); }
+                else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); }
                 return cs;
               });
               return nl;
@@ -2141,7 +2229,7 @@ function RepCountApp() {
                 const nl = [...log, newReps];
                 setCurrentSet(cs => {
                   if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
-                  else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); showMotivo(rand(MSG_SET)); }
+                  else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); }
                   return cs;
                 });
                 return nl;
@@ -2210,13 +2298,7 @@ function RepCountApp() {
     <div style={{ minHeight:"100vh", background:"#0A0A0F", fontFamily:"'Bebas Neue','Arial Black',sans-serif", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px", position:"relative", overflow:"hidden" }}>
       <div style={{ position:"absolute", top:"-100px", left:"50%", transform:"translateX(-50%)", width:"600px", height:"600px", background:`radial-gradient(circle, ${C}22 0%, transparent 70%)`, pointerEvents:"none", transition:"background 0.5s ease" }} />
 
-      {/* ── TOAST MILITAR ── */}
-      {motivoVisible && (screen === "counting" || screen === "libre" || screen === "rest") && (
-        <div style={{ position:"fixed", bottom:"30px", left:"50%", transform:"translateX(-50%)", zIndex:999, maxWidth:"360px", width:"90%", background:"#0A0A0F", border:"1px solid rgba(255,255,255,0.15)", borderLeft:"3px solid #FF4D4D", borderRadius:"4px", padding:"14px 18px", boxShadow:"0 0 40px rgba(0,0,0,0.8)", animation:"toastIn 0.3s ease-out" }}>
-          <div style={{ fontSize:"10px", letterSpacing:"4px", color:"#FF4D4D", marginBottom:"5px", fontFamily:"'Bebas Neue',sans-serif" }}>■ ORDEN</div>
-          <div style={{ fontSize:"15px", letterSpacing:"2px", color:"#fff", fontFamily:"'Bebas Neue',sans-serif", lineHeight:1.3 }}>{motivoMsg}</div>
-        </div>
-      )}
+      {/* TODO: mensajes motivacionales — pendiente de rediseño */}
 
       {/* ── HOME ── */}
       {screen === "home" && (
