@@ -406,9 +406,19 @@ const REP_DETECTORS = {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
     const cR = Math.min(kps[12][2], kps[14][2], kps[16][2]);
     if (cL < MIN_CONF && cR < MIN_CONF) return { angle: null, phase: null, conf: 0 };
-    const L = cL >= cR;
-    const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
-    return { angle: Math.round(a), phase: a < 95 ? "down" : a > 155 ? "up" : null, conf: L ? cL : cR };
+    // Verificar que es pistol y no sentadilla bilateral:
+    // La pierna libre debe estar extendida (>130°) y haber diferencia significativa (>40°) entre piernas.
+    // Datos reales del usuario: pierna trabajando 76-101°, pierna libre 155-174°, diff siempre >40°.
+    const aL = cL >= MIN_CONF ? calcAngle(kps[11], kps[13], kps[15]) : 180;
+    const aR = cR >= MIN_CONF ? calcAngle(kps[12], kps[14], kps[16]) : 180;
+    const diff = Math.abs(aL - aR);
+    const freeAngle = Math.max(aL, aR);   // la más extendida = pierna libre
+    const workAngle = Math.min(aL, aR);   // la más doblada = pierna trabajando
+    // Si las dos están similares → bilateral, no pistol
+    if (diff < 40 || freeAngle < 130) return { angle: null, phase: null, conf: 0 };
+    const L = aL < aR; // lado que trabaja
+    const conf = L ? cL : cR;
+    return { angle: Math.round(workAngle), phase: workAngle < 95 ? "down" : workAngle > 155 ? "up" : null, conf };
   },
   // ── PIKE PUSHUP: codo + cadera alta ──────────────────────────────────────
   pike_pushup: (kps) => {
@@ -713,7 +723,11 @@ function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle
                     phaseHistRef.current = [];
                   }
                 } else {
-                  onAngle?.({ angle: null, phase: phaseRef.current, conf: 0 });
+                  // Pasar phase: null (no phaseRef.current) para que el hold mode sepa
+                  // que la posición es inválida y pause el timer
+                  phaseHistRef.current = [];
+                  phaseRef.current = null;
+                  onAngle?.({ angle: null, phase: null, conf: 0 });
                 }
               }
             }
