@@ -393,9 +393,14 @@ const REP_DETECTORS = {
     // En zancada las rodillas están a diferente altura Y, o los tobillos separados
     const isLunge = kneeYdiff > hipW * 0.4 || ankYdiff > hipW * 0.4;
     if (!isLunge) return { angle: null, phase: null, conf: 0 };
-    const L = cL >= cR;
-    const a = L ? calcAngle(kps[11], kps[13], kps[15]) : calcAngle(kps[12], kps[14], kps[16]);
-    return { angle: Math.round(a), phase: a < 105 ? "down" : a > 160 ? "up" : null, conf: L ? cL : cR };
+    // En zancadas alternadas el lado dominante cambia con cada rep.
+    // Usar la pierna que está zancando (menor ángulo de rodilla) en lugar del lado con más conf.
+    const aL = cL >= MIN_CONF ? calcAngle(kps[11], kps[13], kps[15]) : 180;
+    const aR = cR >= MIN_CONF ? calcAngle(kps[12], kps[14], kps[16]) : 180;
+    const usarIzq = aL < aR;
+    const a    = usarIzq ? aL : aR;
+    const conf = usarIzq ? cL : cR;
+    return { angle: Math.round(a), phase: a < 105 ? "down" : a > 160 ? "up" : null, conf };
   },
   sentadilla_una_pierna: (kps) => {
     const cL = Math.min(kps[11][2], kps[13][2], kps[15][2]);
@@ -486,10 +491,10 @@ const REP_DETECTORS = {
     const wriY  = (kps[9][1]  + kps[10][1]) / 2;
     const wriUp = shdY - wriY; // positivo = muñecas por encima de hombros
     const conf  = Math.max(cAnk, cWri);
-    // "up": pies separados (>0.7×hombros) Y manos arriba
-    // "down": pies juntos (<0.4×hombros) O manos bajas
-    const phase = (ankSep > 0.7 && wriUp > 20) ? "up"
-                : (ankSep < 0.4 || wriUp < -20) ? "down"
+    // "up": pies separados (>0.55×hombros) Y manos arriba — umbral bajado para ritmo rápido
+    // "down": pies juntos (<0.38×hombros) Y manos bajas — AND en lugar de OR evita falsos positivos
+    const phase = (ankSep > 0.55 && wriUp > 10) ? "up"
+                : (ankSep < 0.38 && wriUp < 5)  ? "down"
                 : null;
     return { angle: Math.round(ankSep * 100), phase, conf };
   },
@@ -552,7 +557,7 @@ function preloadMoveNetScripts() {
 
 // ─── MOVENET HOOK — con smoothing, debounce y cooldown ────────────────────
 
-function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle, facingMode = "user" }) {
+function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle, onReady, facingMode = "user" }) {
   const videoRef     = useRef(null);
   const keypointsRef = useRef(null);
   const phaseRef     = useRef(null);
@@ -631,6 +636,7 @@ function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle
         let framesSinDeteccion = 0;
         const MAX_FRAMES_SIN_DETECCION = 90; // ~15s a 6fps en mobile lento
         onStatus("ACTIVO");
+        onReady?.(); // notifica al padre que la IA está lista para detectar
 
         // 🔧 SPEED OPT 4: frame skipping en mobile (1 de cada 2 frames)
         let frameCount = 0;
@@ -733,7 +739,7 @@ function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle
 
 // ─── POSE VIEW — con overlay de ángulo y fase ─────────────────────────────
 
-function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }) {
+function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera, onReady, onPhaseChange }) {
   const canvasRef    = useRef(null);
   const drawFrameRef = useRef(null);
   const [status, setStatus]   = useState("En espera...");
@@ -742,6 +748,7 @@ function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }
   const [liveConf,  setLiveConf]  = useState(0);
   const [repFlash,  setRepFlash]  = useState(false);
   const repFlashRef = useRef(false);
+  const lastPhaseRef = useRef(null); // para no spamear onPhaseChange
 
   const handleRep = () => {
     onRep();
@@ -754,10 +761,16 @@ function PoseView({ color, exerciseId, onRep, active, facingMode, onFlipCamera }
     setLiveAngle(angle);
     setLivePhase(phase);
     setLiveConf(conf);
+    // Notificar al padre solo cuando la fase cambia
+    if (phase !== lastPhaseRef.current) {
+      lastPhaseRef.current = phase;
+      onPhaseChange?.(phase);
+    }
   };
 
   const { videoRef, keypointsRef } = useMoveNet({
-    active, exerciseId, onRep: handleRep, onIncomplete: () => {}, onStatus: setStatus, onAngle: handleAngle, facingMode
+    active, exerciseId, onRep: handleRep, onIncomplete: () => {}, onStatus: setStatus, onAngle: handleAngle, facingMode,
+    onReady,
   });
 
   const CONNECTIONS = [
@@ -1955,6 +1968,12 @@ function RepCountApp() {
   const [goalReached, setGoalReached]    = useState(false);
   const [lastSession, setLastSession]    = useState(null);
   const [poseActive, setPoseActive]      = useState(false);
+  const [poseReady, setPoseReady]        = useState(true);
+  const [holdPhase, setHoldPhase]        = useState(null);
+  const holdPhaseRef = useRef(null);
+
+  // Mantener ref sincronizada para uso dentro de setInterval
+  useEffect(() => { holdPhaseRef.current = holdPhase; }, [holdPhase]);
   const [facingMode, setFacingMode]      = useState("user");
   const [cameraKey, setCameraKey]        = useState(0);
   // Rutinas de entrenamiento
@@ -2025,7 +2044,8 @@ function RepCountApp() {
   };
 
   const launchSession = () => {
-    setPoseActive(true); // IA arranca automáticamente
+    setPoseReady(false); // MoveNet todavía no cargó, timer esperará
+    setPoseActive(true);
     if (mode === "libre") {
       setElapsed(0); setScreen("libre");
     } else if (seriesMode === "reps") {
@@ -2038,7 +2058,7 @@ function RepCountApp() {
   const resetApp = () => {
     clearInterval(timerRef.current); cancelAnimationFrame(spinRef.current);
     setScreen("home"); setSelected(null); setReps(0); setTimeLeft(0); setElapsed(0);
-    setSetRepsLog([]); setCurrentSet(1); setShowFireworks(false); setSessionSaved(false); setGoalReached(false); setOpenCat(null); setPoseActive(false);
+    setSetRepsLog([]); setCurrentSet(1); setShowFireworks(false); setSessionSaved(false); setGoalReached(false); setOpenCat(null); setPoseActive(false); setPoseReady(true); setHoldPhase(null);
     setActiveRoutine(null); setRoutineExIdx(0); setRoutineLog([]);
   };
 
@@ -2058,42 +2078,76 @@ function RepCountApp() {
   }, [screen, countdownLeft]);
 
   // Cronómetro libre — cuenta hacia arriba
+  // Para ejercicios hold (plancha): solo avanza cuando la pose es correcta
   useEffect(() => {
     if (screen !== "libre") return;
-    timerRef.current = setInterval(() => setElapsed(t => t + 1), 1000);
+    const isHold = exercises.find(e => e.id === selected?.id)?.holdMode;
+    timerRef.current = setInterval(() => {
+      if (isHold && poseActive && holdPhaseRef.current !== "up") return; // pausa si pose incorrecta
+      setElapsed(t => t + 1);
+    }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [screen]);
+  }, [screen, poseActive]);
 
   useEffect(() => {
     if (screen !== "counting") return;
-    // Modo reps: sin timer, el set termina cuando el usuario alcanza repsPerSet
     if (seriesMode === "reps") return;
-    // Modo time: timer countdown
-    const setDur = duration;
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current);
-          setReps(cr => {
-            setSetRepsLog(log => {
-              const nl = [...log, cr];
-              setCurrentSet(cs => {
-                if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
-                else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); }
-                return cs;
+    if (poseActive && !poseReady) return;
+
+    const isHold = exercises.find(e => e.id === selected?.id)?.holdMode;
+
+    if (isHold) {
+      // ── MODO HOLD (plancha): timer solo avanza cuando la pose es válida ──
+      timerRef.current = setInterval(() => {
+        if (holdPhaseRef.current !== "up") return;
+        setTimeLeft(t => {
+          if (t <= 1) {
+            clearInterval(timerRef.current);
+            setReps(cr => {
+              setSetRepsLog(log => {
+                const nl = [...log, cr + 1];
+                setCurrentSet(cs => {
+                  if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
+                  else { setRestLeft(restDuration); setScreen("rest"); playBeep("ready"); } // doble silbato
+                  return cs;
+                });
+                return nl;
               });
-              return nl;
+              return cr;
             });
-            return cr;
-          });
-          return 0;
-        }
-        if (t === 6) playBeep("warning"); // 3 pips cuando quedan 5 segundos
-        return t - 1;
-      });
-    }, 1000);
+            return 0;
+          }
+          if (t === 6) playBeep("warning");
+          return t - 1;
+        });
+      }, 1000);
+    } else {
+      // ── MODO NORMAL: countdown continuo ──
+      timerRef.current = setInterval(() => {
+        setTimeLeft(t => {
+          if (t <= 1) {
+            clearInterval(timerRef.current);
+            setReps(cr => {
+              setSetRepsLog(log => {
+                const nl = [...log, cr];
+                setCurrentSet(cs => {
+                  if (cs >= totalSets) { setScreen("finished"); playBeep("victory"); }
+                  else { setRestLeft(restDuration); setScreen("rest"); playBeep("whistle"); }
+                  return cs;
+                });
+                return nl;
+              });
+              return cr;
+            });
+            return 0;
+          }
+          if (t === 6) playBeep("warning");
+          return t - 1;
+        });
+      }, 1000);
+    }
     return () => clearInterval(timerRef.current);
-  }, [screen, seriesMode, totalSets, restDuration, duration]);
+  }, [screen, seriesMode, totalSets, restDuration, duration, poseActive, poseReady]);
 
   // Timer para descanso entre ejercicios de rutina
   useEffect(() => {
@@ -2126,6 +2180,7 @@ function RepCountApp() {
           setCurrentSet(cs => cs + 1);
           setReps(0); setActiveStep(0); setTimeLeft(duration);
           setCameraKey(k => k + 1); // remount PoseView para limpiar estado del detector
+          setPoseReady(false);      // MoveNet necesita reiniciarse, esperar antes de arrancar timer
           setScreen("counting"); playBeep("go");
           return 0;
         }
@@ -2569,17 +2624,30 @@ function RepCountApp() {
           </div>
 
           {/* CRONÓMETRO — barra fina con tiempo, solo en modos con tiempo */}
-          {seriesMode !== "reps" && (
-            <div style={{ marginBottom:"12px", padding:"0 8px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"5px" }}>
-                <div style={{ fontSize:"9px", letterSpacing:"3px", color:"#444" }}>TIEMPO</div>
-                <div style={{ fontSize:"20px", letterSpacing:"2px", color:timeLeft<=10?"#FF4D4D":C, fontVariantNumeric:"tabular-nums", transition:"color 0.3s", textShadow:timeLeft<=10?`0 0 12px #FF4D4D`:"none" }}>{fmt(timeLeft)}</div>
+          {seriesMode !== "reps" && (() => {
+            const isHold = exercises.find(e => e.id === selected.id)?.holdMode;
+            const holdPaused = isHold && poseActive && holdPhase !== "up";
+            const timerColor = holdPaused ? "#FF4D4D" : timeLeft <= 10 ? "#FF4D4D" : C;
+            const timerLabel = isHold ? (holdPaused ? "⏸ MANTENÉ LA POSICIÓN" : "▶ CONTANDO") : "TIEMPO";
+            return (
+              <div style={{ marginBottom:"12px", padding:"0 8px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"5px" }}>
+                  <div style={{ fontSize:"9px", letterSpacing:"3px", color: holdPaused ? "#FF4D4D" : "#444",
+                    animation: holdPaused ? "pulse 0.8s ease-in-out infinite" : "none" }}>{timerLabel}</div>
+                  <div style={{ fontSize:"20px", letterSpacing:"2px", color: timerColor,
+                    fontVariantNumeric:"tabular-nums", transition:"color 0.3s",
+                    textShadow: holdPaused ? "0 0 12px #FF4D4D" : timeLeft<=10 ? "0 0 12px #FF4D4D" : "none",
+                    animation: holdPaused ? "pulse 0.8s ease-in-out infinite" : "none" }}>{fmt(timeLeft)}</div>
+                </div>
+                <div style={{ height:"4px", borderRadius:"2px", background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
+                  <div style={{ height:"100%", borderRadius:"2px", width:`${pct}%`,
+                    background: holdPaused ? "#FF4D4D" : timeLeft<=10 ? "#FF4D4D" : C,
+                    transition:"width 1s linear",
+                    boxShadow:`0 0 8px ${holdPaused ? "#FF4D4D" : timeLeft<=10 ? "#FF4D4D" : C}` }}/>
+                </div>
               </div>
-              <div style={{ height:"4px", borderRadius:"2px", background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
-                <div style={{ height:"100%", borderRadius:"2px", width:`${pct}%`, background:timeLeft<=10?"#FF4D4D":C, transition:"width 1s linear", boxShadow:`0 0 8px ${timeLeft<=10?"#FF4D4D":C}` }}/>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* BIG COUNTER — protagonista total */}
           <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 16px" }}>
@@ -2640,7 +2708,10 @@ function RepCountApp() {
           {/* POSE VIEW */}
           {poseActive && (
             <div style={{ marginBottom:"14px" }}>
-              <PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode} onFlipCamera={() => { setFacingMode(m => m === "user" ? "environment" : "user"); setCameraKey(k => k+1); }} />
+              <PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode}
+                onFlipCamera={() => { setFacingMode(m => m === "user" ? "environment" : "user"); setCameraKey(k => k+1); }}
+                onReady={() => setPoseReady(true)}
+                onPhaseChange={p => setHoldPhase(p)} />
             </div>
           )}
 
@@ -2672,15 +2743,30 @@ function RepCountApp() {
           <div style={{ fontSize:"9px", letterSpacing:"6px", color:"#555", marginBottom:"16px" }}>⏱ MODO LIBRE</div>
 
           {/* CRONÓMETRO LIBRE — barra fina con elapsed */}
-          <div style={{ marginBottom:"12px", padding:"0 8px" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"5px" }}>
-              <div style={{ fontSize:"9px", letterSpacing:"3px", color:"#444" }}>TIEMPO</div>
-              <div style={{ fontSize:"20px", letterSpacing:"2px", color:C, fontVariantNumeric:"tabular-nums" }}>{fmt(elapsed)}</div>
-            </div>
-            <div style={{ height:"4px", borderRadius:"2px", background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
-              <div style={{ height:"100%", borderRadius:"2px", width:`${((elapsed % 180) / 180) * 100}%`, background:goalReached?"#FFD700":C, transition:"width 1s linear", boxShadow:`0 0 8px ${goalReached?"#FFD700":C}` }}/>
-            </div>
-          </div>
+          {(() => {
+            const isHold = exercises.find(e => e.id === selected.id)?.holdMode;
+            const holdPaused = isHold && poseActive && holdPhase !== "up";
+            const timerColor = holdPaused ? "#FF4D4D" : C;
+            const timerLabel = isHold ? (holdPaused ? "⏸ MANTENÉ LA POSICIÓN" : "▶ CONTANDO") : "TIEMPO";
+            return (
+              <div style={{ marginBottom:"12px", padding:"0 8px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"5px" }}>
+                  <div style={{ fontSize:"9px", letterSpacing:"3px", color: holdPaused ? "#FF4D4D" : "#444",
+                    animation: holdPaused ? "pulse 0.8s ease-in-out infinite" : "none" }}>{timerLabel}</div>
+                  <div style={{ fontSize:"20px", letterSpacing:"2px", color: timerColor, fontVariantNumeric:"tabular-nums",
+                    textShadow: holdPaused ? "0 0 12px #FF4D4D" : "none",
+                    animation: holdPaused ? "pulse 0.8s ease-in-out infinite" : "none" }}>{fmt(elapsed)}</div>
+                </div>
+                <div style={{ height:"4px", borderRadius:"2px", background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
+                  <div style={{ height:"100%", borderRadius:"2px",
+                    width:`${((elapsed % 180) / 180) * 100}%`,
+                    background: holdPaused ? "#FF4D4D" : goalReached ? "#FFD700" : C,
+                    transition:"width 1s linear",
+                    boxShadow:`0 0 8px ${holdPaused ? "#FF4D4D" : goalReached ? "#FFD700" : C}` }}/>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* BIG COUNTER — protagonista total */}
           <div style={{ position:"relative", width:"240px", height:"240px", margin:"0 auto 20px" }}>
@@ -2717,7 +2803,10 @@ function RepCountApp() {
           {/* POSE VIEW */}
           {poseActive && (
             <div style={{ marginBottom:"14px" }}>
-              <PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode} onFlipCamera={() => { setFacingMode(m => m === "user" ? "environment" : "user"); setCameraKey(k => k+1); }} />
+              <PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode}
+                onFlipCamera={() => { setFacingMode(m => m === "user" ? "environment" : "user"); setCameraKey(k => k+1); }}
+                onReady={() => setPoseReady(true)}
+                onPhaseChange={p => setHoldPhase(p)} />
             </div>
           )}
 
