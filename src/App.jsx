@@ -501,10 +501,11 @@ const REP_DETECTORS = {
     const wriY  = (kps[9][1]  + kps[10][1]) / 2;
     const wriUp = shdY - wriY; // positivo = muñecas por encima de hombros
     const conf  = Math.max(cAnk, cWri);
-    // "up": pies separados (>0.55×hombros) Y manos arriba — umbral bajado para ritmo rápido
-    // "down": pies juntos (<0.38×hombros) Y manos bajas — AND en lugar de OR evita falsos positivos
+    // "up": pies separados (>0.55×hombros) Y manos arriba
+    // "down": brazos claramente abajo (<-20px) — datos reales muestran wriUp=-85 en pos. cerrada
+    // Los tobillos en A5 dan ratio ~0.49 incluso cerrado, por eso no los usamos para "down"
     const phase = (ankSep > 0.55 && wriUp > 10) ? "up"
-                : (ankSep < 0.38 && wriUp < 5)  ? "down"
+                : (wriUp < -20)                  ? "down"
                 : null;
     return { angle: Math.round(ankSep * 100), phase, conf };
   },
