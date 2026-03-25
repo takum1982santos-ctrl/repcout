@@ -632,6 +632,21 @@ function useMoveNet({ active, exerciseId, onRep, onIncomplete, onStatus, onAngle
         }
 
         onStatus("3/3 · Modelo pose... [" + backendUsed + "]");
+
+        // 🔧 FIX A5: en dispositivos lentos poseDetection.movenet puede llegar undefined
+        // aunque el script ya cargó. Reintentamos la carga hasta 3 veces con espera.
+        let retries = 0;
+        while ((!window.poseDetection?.movenet) && retries < 3) {
+          retries++;
+          onStatus("3/3 · Esperando modelo... (" + retries + "/3)");
+          await new Promise(r => setTimeout(r, 1500));
+          try { await loadScript(PD_URL); } catch(e) {}
+        }
+        if (!window.poseDetection?.movenet) {
+          onStatus("Error: modelo no disponible — recargá la página");
+          if (!cancelled) return;
+        }
+
         const detector = await window.poseDetection.createDetector(
           window.poseDetection.SupportedModels.MoveNet,
           {
