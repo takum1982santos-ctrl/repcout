@@ -985,6 +985,7 @@ if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A
       </div>
     ))}
   </div></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
+  
   return(
     <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px",position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:`radial-gradient(circle, ${C}22 0%, transparent 70%)`,pointerEvents:"none",transition:"background 0.5s"}}/>
