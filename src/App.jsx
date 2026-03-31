@@ -703,7 +703,7 @@ function RepCountApp(){
   const[screen,setScreen]=useState("home");
   const[showInfo,setShowInfo]=useState(false);
   const[paused,setPaused]=useState(false);
-
+  const[openCatLibre,setOpenCatLibre]=useState(null);
   // ── LIBRE ──
   const[selected,setSelected]=useState(null);
   const[mode,setMode]=useState("series");
