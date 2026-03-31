@@ -675,6 +675,30 @@ function ProgramScreen({onBack,onStartSession}){
   return null;
 }
 
+// ─── PROG PREP SCREEN ────────────────────────────────────────────────────────
+function ProgPrepScreen({activeSession,progBlockIdx,progRoundIdx,onReady}){
+  const block=activeSession.blocks[progBlockIdx];
+  const bt=BLOCK_TYPES[block?.type||"normal"];
+  const ex=block?.exercises[0];
+  const exData=exercises.find(e=>e.id===ex?.exerciseId);
+  const[prepCount,setPrepCount]=useState(5);
+  useEffect(()=>{
+    if(prepCount<=0){onReady();return;}
+    if(prepCount<=3)playBeep("warning");
+    const t=setTimeout(()=>setPrepCount(n=>n-1),1000);
+    return()=>clearTimeout(t);
+  },[prepCount]);
+  return(<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
+    <div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"6px"}}>BLOQUE {progBlockIdx+1} · RONDA {progRoundIdx+1}/{block?.rounds}</div>
+    <div style={{fontSize:"14px",letterSpacing:"3px",color:bt.color,marginBottom:"24px"}}>{bt.emoji} {bt.label}</div>
+    <div style={{fontSize:"60px",marginBottom:"12px"}}>{exData?.icon||"💪"}</div>
+    <div style={{fontSize:"26px",letterSpacing:"3px",color:"#fff",marginBottom:"6px"}}>{exData?.name?.toUpperCase()}</div>
+    <div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"32px"}}>{ex?.mode==="reps"?`${ex?.targetReps||10} reps`:fmt(ex?.duration||120)}</div>
+    <div style={{fontSize:"72px",color:bt.color,fontFamily:"'DSEG7 Classic',monospace",textShadow:`0 0 30px ${bt.color}88`,lineHeight:1,marginBottom:"16px"}}>{prepCount}</div>
+    <div style={{fontSize:"11px",letterSpacing:"4px",color:"#444"}}>PREPARATE</div>
+  </div>);
+}
+
 // ─── PAUSE OVERLAY ────────────────────────────────────────────────────────────
 // Se muestra durante el ejercicio cuando el usuario pausa
 function PauseOverlay({onResume,onSkip,onAbandon,setRestLeft,restLeft,isRest}){
@@ -703,7 +727,7 @@ function RepCountApp(){
   const[screen,setScreen]=useState("home");
   const[showInfo,setShowInfo]=useState(false);
   const[paused,setPaused]=useState(false);
-  const[openCatLibre,setOpenCatLibre]=useState(null);
+
   // ── LIBRE ──
   const[selected,setSelected]=useState(null);
   const[mode,setMode]=useState("series");
@@ -959,33 +983,11 @@ function RepCountApp(){
   if(screen==="program")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}><div style={{width:"100%",maxWidth:"420px"}}><ProgramScreen onBack={()=>setScreen("home")} onStartSession={(ses)=>{startProgram(ses);}}/></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
 
   // LIBRE SELECT — elegir ejercicio en modo libre
-if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px"}}><div style={{width:"100%",maxWidth:"420px"}}><div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}><button onClick={()=>setScreen("home")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button><div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>ELEGIR EJERCICIO</div></div><div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>{[{id:"series",label:"📋 SERIES",desc:"Sets + descanso + tiempo"},{id:"libre",label:"⏱ LIBRE",desc:"Cronómetro libre"}].map(m=>{const active=mode===m.id;return(<button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"12px 10px",background:active?"#FF4D4D":"rgba(255,255,255,0.03)",border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`,borderRadius:"12px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}><div style={{fontSize:"14px",letterSpacing:"2px",color:active?"#000":"#555",fontFamily:"'Bebas Neue',sans-serif"}}>{m.label}</div><div style={{fontFamily:"sans-serif",fontSize:"9px",color:active?"#00000077":"#333",marginTop:"3px"}}>{m.desc}</div></button>);})}</div>
-  <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-    {categories.map(cat=>(
-      <div key={cat.id}>
-        <button onClick={()=>setOpenCatLibre(openCatLibre===cat.id?null:cat.id)} style={{width:"100%",background:openCatLibre===cat.id?`${cat.color}18`:"rgba(255,255,255,0.04)",border:`1px solid ${cat.color}${openCatLibre===cat.id?"88":"33"}`,borderRadius:openCatLibre===cat.id?"14px 14px 0 0":"14px",padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",transition:"all 0.2s"}}>
-          <span style={{fontSize:"24px"}}>{cat.icon}</span>
-          <div style={{flex:1,textAlign:"left"}}>
-            <div style={{fontSize:"20px",letterSpacing:"3px",color:openCatLibre===cat.id?cat.color:"#fff"}}>{cat.name.toUpperCase()}</div>
-          </div>
-          <span style={{fontSize:"16px",color:openCatLibre===cat.id?cat.color:"#444",transform:openCatLibre===cat.id?"rotate(90deg)":"rotate(0deg)",display:"inline-block",transition:"transform 0.2s"}}>›</span>
-        </button>
-        {openCatLibre===cat.id&&<div style={{border:`1px solid ${cat.color}33`,borderTop:"none",borderRadius:"0 0 14px 14px",overflow:"hidden"}}>
-          {cat.exercises.map((ex,i)=>(
-            <button key={ex.id} onClick={async()=>{await selectExercise(ex);setScreen("setup");}} style={{width:"100%",background:"rgba(255,255,255,0.02)",borderTop:i>0?"1px solid rgba(255,255,255,0.05)":"none",border:"none",padding:"12px 18px 12px 28px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",textAlign:"left"}} onMouseEnter={e=>e.currentTarget.style.background=`${ex.color}18`} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}>
-              <span style={{fontSize:"20px"}}>{ex.icon}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:"16px",letterSpacing:"2px",color:"#ddd"}}>{ex.name.toUpperCase()}</div>
-                <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{ex.desc}</div>
-              </div>
-              <div style={{width:"7px",height:"7px",borderRadius:"50%",background:ex.color,boxShadow:`0 0 6px ${ex.color}`,flexShrink:0}}/>
-            </button>
-          ))}
-        </div>}
-      </div>
-    ))}
-  </div></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
-  
+  if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px"}}><div style={{width:"100%",maxWidth:"420px"}}><div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}><button onClick={()=>setScreen("home")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button><div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>ELEGIR EJERCICIO</div></div><div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>{[{id:"series",label:"📋 SERIES",desc:"Sets + descanso + tiempo"},{id:"libre",label:"⏱ LIBRE",desc:"Cronómetro libre"}].map(m=>{const active=mode===m.id;return(<button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"12px 10px",background:active?"#FF4D4D":"rgba(255,255,255,0.03)",border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`,borderRadius:"12px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}><div style={{fontSize:"14px",letterSpacing:"2px",color:active?"#000":"#555",fontFamily:"'Bebas Neue',sans-serif"}}>{m.label}</div><div style={{fontFamily:"sans-serif",fontSize:"9px",color:active?"#00000077":"#333",marginTop:"3px"}}>{m.desc}</div></button>);})}</div>
+    <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+      {categories.map(cat=>{const[open,setOpen]=useState(false);return(<div key={cat.id}><button onClick={()=>setOpen(!open)} style={{width:"100%",background:open?`${cat.color}18`:"rgba(255,255,255,0.04)",border:`1px solid ${cat.color}${open?"88":"33"}`,borderRadius:open?"14px 14px 0 0":"14px",padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",transition:"all 0.2s"}}><span style={{fontSize:"24px"}}>{cat.icon}</span><div style={{flex:1,textAlign:"left"}}><div style={{fontSize:"20px",letterSpacing:"3px",color:open?cat.color:"#fff"}}>{cat.name.toUpperCase()}</div></div><span style={{fontSize:"16px",color:open?cat.color:"#444",transform:open?"rotate(90deg)":"rotate(0deg)",display:"inline-block",transition:"transform 0.2s"}}>›</span></button>{open&&<div style={{border:`1px solid ${cat.color}33`,borderTop:"none",borderRadius:"0 0 14px 14px",overflow:"hidden"}}>{cat.exercises.map((ex,i)=>(<button key={ex.id} onClick={async()=>{await selectExercise(ex);setScreen("setup");}} style={{width:"100%",background:"rgba(255,255,255,0.02)",borderTop:i>0?"1px solid rgba(255,255,255,0.05)":"none",border:"none",padding:"12px 18px 12px 28px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",textAlign:"left"}} onMouseEnter={e=>e.currentTarget.style.background=`${ex.color}18`} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}><span style={{fontSize:"20px"}}>{ex.icon}</span><div style={{flex:1}}><div style={{fontSize:"16px",letterSpacing:"2px",color:"#ddd"}}>{ex.name.toUpperCase()}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{ex.desc}</div></div><div style={{width:"7px",height:"7px",borderRadius:"50%",background:ex.color,boxShadow:`0 0 6px ${ex.color}`,flexShrink:0}}/></button>))}</div>}</div>);})}
+    </div></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
+
   return(
     <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px",position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:`radial-gradient(circle, ${C}22 0%, transparent 70%)`,pointerEvents:"none",transition:"background 0.5s"}}/>
@@ -1142,21 +1144,18 @@ if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A
       </div>}
 
       {/* ── PROGRAMA: PREP ── */}
-      {screen==="prog_prep"&&activeSession&&(()=>{
-        const block=activeSession.blocks[progBlockIdx];const bt=BLOCK_TYPES[block?.type||"normal"];
-        const ex=block?.exercises[0];const exData=exercises.find(e=>e.id===ex?.exerciseId);
-        const[prepCount,setPrepCount]=useState(5);
-        useEffect(()=>{if(prepCount<=0){setScreen("prog_counting");setTimeLeft(ex?.duration||120);setPoseActive(true);setPoseReady(false);playBeep("go");return;}if(prepCount<=3)playBeep("warning");const t=setTimeout(()=>setPrepCount(n=>n-1),1000);return()=>clearTimeout(t);},[prepCount]);
-        return(<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
-          <div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"6px"}}>BLOQUE {progBlockIdx+1} · RONDA {progRoundIdx+1}/{block?.rounds}</div>
-          <div style={{fontSize:"14px",letterSpacing:"3px",color:bt.color,marginBottom:"24px"}}>{bt.emoji} {bt.label}</div>
-          <div style={{fontSize:"60px",marginBottom:"12px"}}>{exData?.icon||"💪"}</div>
-          <div style={{fontSize:"26px",letterSpacing:"3px",color:"#fff",marginBottom:"6px"}}>{exData?.name?.toUpperCase()}</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"32px"}}>{ex?.mode==="reps"?`${ex?.targetReps||10} reps`:fmt(ex?.duration||120)}</div>
-          <div style={{fontSize:"72px",color:bt.color,fontFamily:"'DSEG7 Classic',monospace",textShadow:`0 0 30px ${bt.color}88`,lineHeight:1,marginBottom:"16px"}}>{prepCount}</div>
-          <div style={{fontSize:"11px",letterSpacing:"4px",color:"#444"}}>PREPARATE</div>
-        </div>);
-      })()}
+      {screen==="prog_prep"&&activeSession&&<ProgPrepScreen
+        activeSession={activeSession}
+        progBlockIdx={progBlockIdx}
+        progRoundIdx={progRoundIdx}
+        onReady={()=>{
+          const ex=activeSession.blocks[progBlockIdx]?.exercises[0];
+          setScreen("prog_counting");
+          setTimeLeft(ex?.duration||120);
+          setPoseActive(true);setPoseReady(false);
+          playBeep("go");
+        }}
+      />}
 
       {/* ── PROGRAMA: COUNTING ── */}
       {screen==="prog_counting"&&activeSession&&(()=>{
