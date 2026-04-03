@@ -409,7 +409,7 @@ function InfoModal({onClose}){
         <div style={{display:"flex",flexDirection:"column",gap:"16px",marginBottom:"24px"}}>
           {[
             {icon:"⏱",title:"MODO LIBRE",desc:"Elegís un ejercicio y entrenás sin estructura. Ideal para sesiones cortas o cuando no querés pensar."},
-            {icon:"📋",title:"MI PROGRAMA",desc:"Armás tu semana con sesiones planificadas. La app te guía automáticamente: ejercicio → descanso → siguiente."},
+            {icon:"📋",title:"PROGRAMA RÁPIDO",desc:"Armás tu semana con sesiones planificadas. La app te guía automáticamente: ejercicio → descanso → siguiente."},
             {icon:"💪",title:"SERIE NORMAL",desc:"Un ejercicio, varios sets con descanso entre ellos."},
             {icon:"⚡",title:"SUPERSERIE",desc:"2 ejercicios alternados. Trabajás más en menos tiempo."},
             {icon:"🔥",title:"SERIE GIGANTE",desc:"3 o más ejercicios encadenados. Alta intensidad."},
@@ -467,7 +467,7 @@ function ProgramScreen({onBack,onStartSession}){
     return(<div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
         <button onClick={onBack} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button>
-        <div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>MI PROGRAMA</div>
+        <div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>PROGRAMA RÁPIDO</div>
         <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FF4D4D",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
 
@@ -1014,7 +1014,7 @@ function RepCountApp(){
           </button>
           <button onClick={()=>setScreen("program")} style={{padding:"24px 20px",background:"rgba(255,77,77,0.08)",border:"1px solid rgba(255,77,77,0.25)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,77,77,0.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,77,77,0.08)"}>
             <span style={{fontSize:"36px"}}>📋</span>
-            <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FF4D4D"}}>MI PROGRAMA</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>Sesiones planificadas · La app te guía sola</div></div>
+            <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FF4D4D"}}>PROGRAMA RÁPIDO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>Sesiones planificadas · La app te guía sola</div></div>
             <span style={{marginLeft:"auto",fontSize:"20px",color:"#FF4D4D44"}}>›</span>
           </button>
         </div>
