@@ -1,15 +1,20 @@
 import { useState, useEffect, useRef, Component } from "react";
 
-// MAPA App-40.0
+// MAPA App-41.1
 // ├── ErrorBoundary
 // ├── DATA (categorías, ejercicios, pasos, defaults)
-// ├── BLOCK_TYPES (normal/superset/giantset) ← NUEVO
-// ├── STORAGE (historial, sessions v2, weekly plan) ← NUEVO
+// ├── BLOCK_TYPES (normal/superset/giantset)
+// ├── STORAGE (historial, sessions v2, weekly plan)
 // ├── AUDIO
 // ├── SKELETON POSES + MOVENET + useMoveNet + PoseView + CameraView
 // ├── HistoryScreen (sin cambios)
-// ├── ProgramScreen ← NUEVO (almanaque + editor de sesiones)
+// ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
+//
+// CAMBIOS EN App-41.1:
+// ✅ Preview de sesión en almanaque (toggle al tocar día)
+// ✅ Botones "volver" con background celeste (#4a9eff)
+// ✅ Botón "▶ ARRANCAR HOY" ahora verde (#4caf50)
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -479,7 +484,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
     const hoy=(new Date().getDay()+6)%7;
     return(<div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
-        <button onClick={onBack} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button>
+        <button onClick={onBack} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
         <div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>PROGRAMA RÁPIDO</div>
         <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FF4D4D",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
@@ -502,9 +507,29 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
       {/* Panel del día seleccionado */}
       {selectedDay!==null&&<div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"14px",marginBottom:"16px"}}>
         <div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>{DIAS[selectedDay]} — {weekPlan[selectedDay]?`SESIÓN ASIGNADA`:"SIN SESIÓN"}</div>
-        {weekPlan[selectedDay]&&<div style={{marginBottom:"10px"}}>
-          <div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"8px"}}>{sessions.find(s=>s.id===weekPlan[selectedDay])?.name}</div>
-          <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses)onStartSession(ses);}} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px"}}>▶ ARRANCAR HOY</button>
+        {weekPlan[selectedDay]&&<div>
+          {/* Nombre de sesión */}
+          <div style={{fontFamily:"sans-serif",fontSize:"15px",color:"#fff",marginBottom:"4px",letterSpacing:"1px"}}>SESIÓN: {sessions.find(s=>s.id===weekPlan[selectedDay])?.name}</div>
+          <div style={{height:"1px",background:"rgba(255,255,255,0.1)",marginBottom:"12px"}}/>
+          
+          {/* Preview de bloques */}
+          {sessions.find(s=>s.id===weekPlan[selectedDay])?.blocks.map((block,bi)=>{
+            const bt=BLOCK_TYPES[block.type];
+            const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+            return(<div key={bi} style={{marginBottom:"12px"}}>
+              <div style={{fontSize:"11px",letterSpacing:"2px",color:bt.color,marginBottom:"6px"}}>{bt.emoji} {bt.label}</div>
+              {block.exercises.map((ex,ei)=>{
+                const exData=exercises.find(e=>e.id===ex.exerciseId);
+                return(<div key={ei} style={{fontFamily:"sans-serif",fontSize:"11px",color:"#aaa",marginLeft:"12px",marginBottom:"3px"}}>
+                  • {exData?.name}: {ex.mode==="time"?`${toMmSs(ex.duration)} × ${block.rounds} rondas`:`${block.rounds} × ${ex.targetReps||10} reps`}
+                </div>);
+              })}
+              <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginLeft:"12px",marginTop:"4px"}}>Descanso: {block.restAfter}s</div>
+            </div>);
+          })}
+
+          {/* Botones */}
+          <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses)onStartSession(ses);}} style={{width:"100%",padding:"14px",background:"#4caf50",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px",marginTop:"8px"}}>▶ ARRANCAR HOY</button>
           <button onClick={()=>assignToDay(selectedDay,null)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,77,77,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FF4D4D44",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>QUITAR</button>
         </div>}
         {!weekPlan[selectedDay]&&sessions.length===0&&<div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"10px"}}>Todavía no tenés sesiones. Creá una primero.</div>}
@@ -610,7 +635,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
 
     return(<div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"20px"}}>
-        <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← SESIONES</button>
+        <button onClick={()=>setView("session_list")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← SESIONES</button>
         <div style={{flex:1,textAlign:"center",fontSize:"14px",letterSpacing:"4px"}}>EDITAR SESIÓN</div>
         <button onClick={()=>{setClipboard({blocks:ses.blocks,name:ses.name});setCopyFlash(true);setTimeout(()=>setCopyFlash(false),1500);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:"20px",padding:"0 4px",opacity:copyFlash?1:0.5,transition:"opacity 0.3s"}} title="Copiar sesión">{copyFlash?"✅":"📋"}</button>
       </div>
@@ -681,7 +706,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
 
       {/* Guardar y arrancar */}
       <button onClick={()=>onStartSession(ses)} disabled={ses.blocks.some(b=>b.exercises.length===0)} style={{width:"100%",padding:"18px",background:ses.blocks.some(b=>b.exercises.length===0)?"rgba(255,255,255,0.05)":"#FF4D4D",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:ses.blocks.some(b=>b.exercises.length===0)?"#333":"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>▶ ARRANCAR SESIÓN</button>
-      <button onClick={()=>setView("week")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← PROGRAMA RÁPIDO</button>
+      <button onClick={()=>setView("week")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← PROGRAMA RÁPIDO</button>
 
       {/* Modal tipo de bloque */}
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
