@@ -429,7 +429,7 @@ function InfoModal({onClose}){
 
 // ─── PROGRAM SCREEN ─────────────────────────────────────────────────────────────
 // Pantalla completa de gestión del programa: almanaque + editor de sesiones
-function ProgramScreen({onBack,onStartSession}){
+function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   const[sessions,setSessions]=useState([]);
   const[weekPlan,setWeekPlan]=useState({});
   const[view,setView]=useState("week");       // "week" | "session_list" | "session_edit"
@@ -438,6 +438,8 @@ function ProgramScreen({onBack,onStartSession}){
   const[showBlockType,setShowBlockType]=useState(false);
   const[showTypeInfo,setShowTypeInfo]=useState(null);
   const[selectedDay,setSelectedDay]=useState(null);
+  const[confirmPasteDay,setConfirmPasteDay]=useState(false); // confirmar reemplazar sesión al pegar
+  const[copyFlash,setCopyFlash]=useState(false); // feedback visual al copiar
   const DIAS=["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"];
 
   useEffect(()=>{(async()=>{const s=await loadSessions(),w=await loadWeekPlan();setSessions(s);setWeekPlan(w);})();},[]);
@@ -454,6 +456,17 @@ function ProgramScreen({onBack,onStartSession}){
   // Asignar sesión a día
   const assignToDay=async(dayIdx,sessionId)=>{
     const wp={...weekPlan,[dayIdx]:sessionId||null};await saveWP(wp);setSelectedDay(null);
+  };
+
+  // Pegar sesión desde clipboard
+  const pasteSession=async(dayIdx)=>{
+    if(!clipboard)return;
+    const newBlocks=clipboard.blocks.map(b=>({...b,id:Date.now().toString()+Math.random().toString(36).slice(2),exercises:b.exercises.map(e=>({...e}))}));
+    const newSes={id:Date.now().toString(),name:clipboard.name+" (copia)",blocks:newBlocks};
+    const all=[...sessions,newSes];
+    await saveSes(all);
+    const wp={...weekPlan,[dayIdx]:newSes.id};await saveWP(wp);
+    setConfirmPasteDay(false);setSelectedDay(null);
   };
 
   // Guardar sesión editada
@@ -498,11 +511,23 @@ function ProgramScreen({onBack,onStartSession}){
         {!weekPlan[selectedDay]&&sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
           {sessions.map(s=><button key={s.id} onClick={()=>assignToDay(selectedDay,s.id)} style={{padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>)}
         </div>}
+        {clipboard&&<button onClick={()=>{if(weekPlan[selectedDay])setConfirmPasteDay(true);else pasteSession(selectedDay);}} style={{width:"100%",marginTop:"8px",padding:"10px",background:"rgba(255,215,0,0.07)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>📋 PEGAR: {clipboard.name}</button>}
         <button onClick={()=>setShowBlockType(true)} style={{width:"100%",marginTop:"8px",padding:"10px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN NUEVA</button>
       </div>}
 
       {/* Botón crear sesión cuando no hay día seleccionado */}
       {selectedDay===null&&<button onClick={()=>setShowBlockType(true)} style={{width:"100%",padding:"16px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"14px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN</button>}
+
+      {/* Modal confirmar reemplazar al pegar */}
+      {confirmPasteDay&&selectedDay!==null&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+        <div style={{background:"#111",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%"}}>
+          <div style={{fontSize:"28px",textAlign:"center",marginBottom:"12px"}}>📋</div>
+          <div style={{fontSize:"14px",letterSpacing:"3px",textAlign:"center",marginBottom:"8px"}}>REEMPLAZAR SESIÓN</div>
+          <div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#888",textAlign:"center",marginBottom:"20px"}}>Este día ya tiene una sesión asignada. ¿Querés reemplazarla con la copia de "{clipboard?.name}"?</div>
+          <button onClick={()=>pasteSession(selectedDay)} style={{width:"100%",padding:"14px",background:"#FFD700",border:"none",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>SÍ, REEMPLAZAR</button>
+          <button onClick={()=>setConfirmPasteDay(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+        </div>
+      </div>}
 
       {/* Modal elegir tipo de bloque */}
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
@@ -587,6 +612,7 @@ function ProgramScreen({onBack,onStartSession}){
       <div style={{display:"flex",alignItems:"center",marginBottom:"20px"}}>
         <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← SESIONES</button>
         <div style={{flex:1,textAlign:"center",fontSize:"14px",letterSpacing:"4px"}}>EDITAR SESIÓN</div>
+        <button onClick={()=>{setClipboard({blocks:ses.blocks,name:ses.name});setCopyFlash(true);setTimeout(()=>setCopyFlash(false),1500);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:"20px",padding:"0 4px",opacity:copyFlash?1:0.5,transition:"opacity 0.3s"}} title="Copiar sesión">{copyFlash?"✅":"📋"}</button>
       </div>
 
       {/* Nombre */}
@@ -783,6 +809,9 @@ function RepCountApp(){
   const[cameraKey,setCameraKey]=useState(0);
   const[showFireworks,setShowFireworks]=useState(false);
   useEffect(()=>{holdPhaseRef.current=holdPhase;},[holdPhase]);
+
+  // ── CLIPBOARD (copiar/pegar sesión) ──
+  const[clipboard,setClipboard]=useState(null); // {blocks:[...],name:string} | null
 
   // ── PROGRAMA ──
   const[activeSession,setActiveSession]=useState(null);  // sesión en ejecución
@@ -1011,7 +1040,7 @@ function RepCountApp(){
   if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>setScreen("home")}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
 
   // PROGRAMA
-  if(screen==="program")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}><div style={{width:"100%",maxWidth:"420px"}}><ProgramScreen onBack={()=>setScreen("home")} onStartSession={(ses)=>{startProgram(ses);}}/></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
+  if(screen==="program")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}><div style={{width:"100%",maxWidth:"420px"}}><ProgramScreen onBack={()=>setScreen("home")} onStartSession={(ses)=>{startProgram(ses);}} clipboard={clipboard} setClipboard={setClipboard}/></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
 
   // LIBRE SELECT — elegir ejercicio en modo libre
   if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px"}}><div style={{width:"100%",maxWidth:"420px"}}><div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}><button onClick={()=>setScreen("home")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button><div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>ELEGIR EJERCICIO</div></div><div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>{[{id:"series",label:"📋 SERIES",desc:"Sets + descanso + tiempo"},{id:"libre",label:"⏱ LIBRE",desc:"Cronómetro libre"}].map(m=>{const active=mode===m.id;return(<button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"12px 10px",background:active?"#FF4D4D":"rgba(255,255,255,0.03)",border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`,borderRadius:"12px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}><div style={{fontSize:"14px",letterSpacing:"2px",color:active?"#000":"#555",fontFamily:"'Bebas Neue',sans-serif"}}>{m.label}</div><div style={{fontFamily:"sans-serif",fontSize:"9px",color:active?"#00000077":"#333",marginTop:"3px"}}>{m.desc}</div></button>);})}</div>
