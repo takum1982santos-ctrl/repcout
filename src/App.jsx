@@ -681,6 +681,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
 
       {/* Guardar y arrancar */}
       <button onClick={()=>onStartSession(ses)} disabled={ses.blocks.some(b=>b.exercises.length===0)} style={{width:"100%",padding:"18px",background:ses.blocks.some(b=>b.exercises.length===0)?"rgba(255,255,255,0.05)":"#FF4D4D",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:ses.blocks.some(b=>b.exercises.length===0)?"#333":"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>▶ ARRANCAR SESIÓN</button>
+      <button onClick={()=>setView("week")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← PROGRAMA RÁPIDO</button>
 
       {/* Modal tipo de bloque */}
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
