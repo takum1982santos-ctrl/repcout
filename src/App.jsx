@@ -675,6 +675,29 @@ function ProgramScreen({onBack,onStartSession}){
   return null;
 }
 
+// ─── CATEGORY ITEM (libre_select) ────────────────────────────────────────────
+function CategoryItem({cat,onSelect}){
+  const[open,setOpen]=useState(false);
+  return(
+    <div>
+      <button onClick={()=>setOpen(!open)} style={{width:"100%",background:open?`${cat.color}18`:"rgba(255,255,255,0.04)",border:`1px solid ${cat.color}${open?"88":"33"}`,borderRadius:open?"14px 14px 0 0":"14px",padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",transition:"all 0.2s"}}>
+        <span style={{fontSize:"24px"}}>{cat.icon}</span>
+        <div style={{flex:1,textAlign:"left"}}><div style={{fontSize:"20px",letterSpacing:"3px",color:open?cat.color:"#fff"}}>{cat.name.toUpperCase()}</div></div>
+        <span style={{fontSize:"16px",color:open?cat.color:"#444",transform:open?"rotate(90deg)":"rotate(0deg)",display:"inline-block",transition:"transform 0.2s"}}>›</span>
+      </button>
+      {open&&<div style={{border:`1px solid ${cat.color}33`,borderTop:"none",borderRadius:"0 0 14px 14px",overflow:"hidden"}}>
+        {cat.exercises.map((ex,i)=>(
+          <button key={ex.id} onClick={()=>onSelect(ex)} style={{width:"100%",background:"rgba(255,255,255,0.02)",borderTop:i>0?"1px solid rgba(255,255,255,0.05)":"none",border:"none",padding:"12px 18px 12px 28px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",textAlign:"left"}} onMouseEnter={e=>e.currentTarget.style.background=`${ex.color}18`} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}>
+            <span style={{fontSize:"20px"}}>{ex.icon}</span>
+            <div style={{flex:1}}><div style={{fontSize:"16px",letterSpacing:"2px",color:"#ddd"}}>{ex.name.toUpperCase()}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{ex.desc}</div></div>
+            <div style={{width:"7px",height:"7px",borderRadius:"50%",background:ex.color,boxShadow:`0 0 6px ${ex.color}`,flexShrink:0}}/>
+          </button>
+        ))}
+      </div>}
+    </div>
+  );
+}
+
 // ─── PROG PREP SCREEN ────────────────────────────────────────────────────────
 function ProgPrepScreen({activeSession,progBlockIdx,progRoundIdx,onReady}){
   const block=activeSession.blocks[progBlockIdx];
@@ -833,7 +856,15 @@ function RepCountApp(){
   // Conteo para programa
   const progSimulateRep=()=>{
     if(!activeSession)return;
-    setProgReps(r=>r+1);
+    const block=activeSession.blocks[progBlockIdx];
+    const ex=block?.exercises[progExIdx];
+    setProgReps(r=>{
+      const nr=r+1;
+      if(ex?.mode==="reps"&&nr>=(ex?.targetReps||10)){
+        setTimeout(()=>finishProgExercise(nr),400);
+      }
+      return nr;
+    });
     playBeep("rep");
   };
 
@@ -928,11 +959,11 @@ function RepCountApp(){
     return block.exercises[progExIdx]||null;
   };
 
-  const finishProgExercise=()=>{
+  const finishProgExercise=(finalReps)=>{
     if(!activeSession)return;
     const block=activeSession.blocks[progBlockIdx];
     const ex=block.exercises[progExIdx];
-    setProgDoneLog(log=>[...log,{exerciseId:ex.exerciseId,reps:progReps}]);
+    setProgDoneLog(log=>[...log,{exerciseId:ex.exerciseId,reps:finalReps!==undefined?finalReps:progReps}]);
     setProgReps(0);
 
     const isSuperset=block.type==="superset"||block.type==="giantset";
@@ -985,7 +1016,7 @@ function RepCountApp(){
   // LIBRE SELECT — elegir ejercicio en modo libre
   if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px"}}><div style={{width:"100%",maxWidth:"420px"}}><div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}><button onClick={()=>setScreen("home")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button><div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>ELEGIR EJERCICIO</div></div><div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>{[{id:"series",label:"📋 SERIES",desc:"Sets + descanso + tiempo"},{id:"libre",label:"⏱ LIBRE",desc:"Cronómetro libre"}].map(m=>{const active=mode===m.id;return(<button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"12px 10px",background:active?"#FF4D4D":"rgba(255,255,255,0.03)",border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`,borderRadius:"12px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}><div style={{fontSize:"14px",letterSpacing:"2px",color:active?"#000":"#555",fontFamily:"'Bebas Neue',sans-serif"}}>{m.label}</div><div style={{fontFamily:"sans-serif",fontSize:"9px",color:active?"#00000077":"#333",marginTop:"3px"}}>{m.desc}</div></button>);})}</div>
     <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-      {categories.map(cat=>{const[open,setOpen]=useState(false);return(<div key={cat.id}><button onClick={()=>setOpen(!open)} style={{width:"100%",background:open?`${cat.color}18`:"rgba(255,255,255,0.04)",border:`1px solid ${cat.color}${open?"88":"33"}`,borderRadius:open?"14px 14px 0 0":"14px",padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",transition:"all 0.2s"}}><span style={{fontSize:"24px"}}>{cat.icon}</span><div style={{flex:1,textAlign:"left"}}><div style={{fontSize:"20px",letterSpacing:"3px",color:open?cat.color:"#fff"}}>{cat.name.toUpperCase()}</div></div><span style={{fontSize:"16px",color:open?cat.color:"#444",transform:open?"rotate(90deg)":"rotate(0deg)",display:"inline-block",transition:"transform 0.2s"}}>›</span></button>{open&&<div style={{border:`1px solid ${cat.color}33`,borderTop:"none",borderRadius:"0 0 14px 14px",overflow:"hidden"}}>{cat.exercises.map((ex,i)=>(<button key={ex.id} onClick={async()=>{await selectExercise(ex);setScreen("setup");}} style={{width:"100%",background:"rgba(255,255,255,0.02)",borderTop:i>0?"1px solid rgba(255,255,255,0.05)":"none",border:"none",padding:"12px 18px 12px 28px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",textAlign:"left"}} onMouseEnter={e=>e.currentTarget.style.background=`${ex.color}18`} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.02)"}><span style={{fontSize:"20px"}}>{ex.icon}</span><div style={{flex:1}}><div style={{fontSize:"16px",letterSpacing:"2px",color:"#ddd"}}>{ex.name.toUpperCase()}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{ex.desc}</div></div><div style={{width:"7px",height:"7px",borderRadius:"50%",background:ex.color,boxShadow:`0 0 6px ${ex.color}`,flexShrink:0}}/></button>))}</div>}</div>);})}
+      {categories.map(cat=><CategoryItem key={cat.id} cat={cat} onSelect={async(ex)=>{await selectExercise(ex);setScreen("setup");}}/>)}
     </div></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
 
   return(
