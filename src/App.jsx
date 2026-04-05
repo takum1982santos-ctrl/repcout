@@ -850,6 +850,9 @@ function RepCountApp(){
   // ── CLIPBOARD ──
   const[clipboard,setClipboard]=useState(null);
 
+  // ── HISTORIAL: desde dónde se abrió ──
+  const[historyFrom,setHistoryFrom]=useState("home");
+
   // ── POPUP ÚLTIMA SESIÓN (libre_select) ──
   const[libreLastSession,setLibreLastSession]=useState(null);
   const[showLastPopup,setShowLastPopup]=useState(false);
@@ -1072,7 +1075,7 @@ function RepCountApp(){
 
   // ── SCREENS ──────────────────────────────────────────────────────────────────
 
-  if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>setScreen("home")}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
+  if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>{setScreen(historyFrom);setHistoryFrom("home");}}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
 
   if(screen==="program")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}><div style={{width:"100%",maxWidth:"420px"}}><ProgramScreen onBack={()=>setScreen("home")} onStartSession={(ses)=>{startProgram(ses);}} clipboard={clipboard} setClipboard={setClipboard}/></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
 
@@ -1114,7 +1117,7 @@ function RepCountApp(){
             <span style={{fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>ÚLTIMA SESIÓN</span>
           </button>
           <button
-            onClick={()=>setScreen("history")}
+            onClick={()=>{setHistoryFrom("libre_select");setScreen("history");}}
             style={{flex:1,padding:"12px 10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#aaa",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}>
             <span style={{fontSize:"14px"}}>📊</span>
             <span style={{fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>HISTORIAL</span>
