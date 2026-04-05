@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Component } from "react";
 
-// MAPA App-41.1
+// MAPA App-41.2
 // ├── ErrorBoundary
 // ├── DATA (categorías, ejercicios, pasos, defaults)
 // ├── BLOCK_TYPES (normal/superset/giantset)
@@ -8,13 +8,14 @@ import { useState, useEffect, useRef, Component } from "react";
 // ├── AUDIO
 // ├── SKELETON POSES + MOVENET + useMoveNet + PoseView + CameraView
 // ├── HistoryScreen (sin cambios)
-// ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes)
+// ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes + fix bug volver)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
 //
-// CAMBIOS EN App-41.1:
-// ✅ Preview de sesión en almanaque (toggle al tocar día)
-// ✅ Botones "volver" con background celeste (#4a9eff)
-// ✅ Botón "▶ ARRANCAR HOY" ahora verde (#4caf50)
+// CAMBIOS EN App-41.2:
+// ✅ Bug fix: "← PROGRAMA RÁPIDO" ya no borra bloques (va a session_list)
+// ✅ Botones celestes (#4a9eff) en libre_select y setup
+// ✅ Popup "última sesión" en libre_select
+// ✅ Botón HISTORIAL en libre_select
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -86,7 +87,6 @@ const exerciseDefaults = {
 };
 
 // ─── BLOCK TYPES ──────────────────────────────────────────────────────────────
-// Cada tipo de bloque define cómo se encadenan los ejercicios
 const BLOCK_TYPES = {
   normal:   { label:"SERIE NORMAL",  emoji:"💪", color:"#FF8C00", restWithin:0,  restAfter:90,  maxEx:1,
     desc:"Un ejercicio, varios sets con descanso entre ellos. Perfecto para aprender o focalizarte en un músculo." },
@@ -111,15 +111,12 @@ async function loadRoutines() { try{const r=await window.storage.get(ROUTINES_KE
 async function saveRoutines(r) { try{await window.storage.set(ROUTINES_KEY,JSON.stringify(r));}catch{} }
 async function clearHistory() { try{await window.storage.delete(STORAGE_KEY);}catch{} }
 
-// Sessions = lista de sesiones guardadas (cada una tiene bloques)
 async function loadSessions() { try{const r=await window.storage.get(SESSIONS_KEY);return r?JSON.parse(r.value):[];}catch{return [];} }
 async function saveSessions(s) { try{await window.storage.set(SESSIONS_KEY,JSON.stringify(s));}catch{} }
 
-// WeekPlan = { 0..6: sessionId | null }  (0=Lunes)
 async function loadWeekPlan() { try{const r=await window.storage.get(WEEKPLAN_KEY);return r?JSON.parse(r.value):{};}catch{return {};} }
 async function saveWeekPlan(p) { try{await window.storage.set(WEEKPLAN_KEY,JSON.stringify(p));}catch{} }
 
-// Fake history para primera vez
 const daysAgo=n=>new Date(Date.now()-n*86400000).toISOString();
 const FAKE_HISTORY=[
   {id:"f1",date:daysAgo(0),exerciseId:"burpee_con_salto",totalReps:28,sets:[8,10,10],duration:5,rest:60,mode:"series"},
@@ -299,6 +296,9 @@ function formatDate(iso){const d=new Date(iso),t=new Date(),y=new Date();y.setDa
 function formatTime(iso){return new Date(iso).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});}
 function fmt(s){const h=Math.floor(s/3600),m=String(Math.floor((s%3600)/60)).padStart(2,"0"),sec=String(s%60).padStart(2,"0");return h>0?`${h}:${m}:${sec}`:`${m}:${sec}`;}
 
+// Formatea fecha corta: "4-4-26"
+function formatDateShort(iso){const d=new Date(iso);return`${d.getDate()}-${d.getMonth()+1}-${String(d.getFullYear()).slice(2)}`;}
+
 // ─── HISTORY SCREEN ───────────────────────────────────────────────────────────
 function HistoryScreen({onBack}){
   const[history,setHistory]=useState([]);
@@ -373,7 +373,6 @@ function HistoryScreen({onBack}){
 }
 
 // ─── EXERCISE PICKER MODAL ────────────────────────────────────────────────────
-// Picker reutilizable para elegir un ejercicio de la lista completa
 function ExercisePicker({onSelect,onClose,title="ELEGIR EJERCICIO"}){
   const[open,setOpen]=useState(null);
   return(
@@ -432,19 +431,64 @@ function InfoModal({onClose}){
   );
 }
 
+// ─── LAST SESSION POPUP ───────────────────────────────────────────────────────
+// Popup que muestra la última sesión de entrenamiento
+function LastSessionPopup({session,onClose}){
+  if(!session)return null;
+  const ex=exercises.find(e=>e.id===session.exerciseId);
+  const C=ex?.color||"#FF4D4D";
+  const isLibre=session.mode==="libre";
+  const fmtMin=s=>{const m=Math.floor((s||0)/60);return m>0?`${m} min`:"< 1 min";};
+
+  // Línea de resumen: "3 sets · 45 reps" o "8 min · 45 reps"
+  const summary=isLibre
+    ? `${fmtMin(session.elapsed)} · ${session.totalReps} reps`
+    : `${session.sets?.length||0} set${(session.sets?.length||0)!==1?"s":""} · ${session.totalReps} reps`;
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
+      <div style={{background:"#111",border:`1px solid ${C}44`,borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%"}}>
+        <div style={{fontSize:"10px",letterSpacing:"4px",color:"#555",marginBottom:"16px",textAlign:"center"}}>ÚLTIMA SESIÓN</div>
+
+        {/* Ejercicio */}
+        <div style={{display:"flex",alignItems:"center",gap:"14px",marginBottom:"20px"}}>
+          <span style={{fontSize:"36px"}}>{ex?.icon}</span>
+          <div>
+            <div style={{fontSize:"20px",letterSpacing:"2px",color:C}}>{ex?.name?.toUpperCase()}</div>
+            <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555",marginTop:"3px"}}>
+              {formatDateShort(session.date)} · {formatTime(session.date)}
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{background:`${C}0f`,border:`1px solid ${C}33`,borderRadius:"12px",padding:"14px 16px",marginBottom:"20px",textAlign:"center"}}>
+          <div style={{fontSize:"28px",letterSpacing:"1px",color:C,marginBottom:"2px"}}>{summary}</div>
+          {!isLibre&&session.sets?.length>0&&(
+            <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"4px"}}>
+              {session.sets.map((r,i)=>`S${i+1}: ${r}`).join("  ·  ")}
+            </div>
+          )}
+        </div>
+
+        <button onClick={onClose} style={{width:"100%",padding:"14px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>OK</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── PROGRAM SCREEN ─────────────────────────────────────────────────────────────
-// Pantalla completa de gestión del programa: almanaque + editor de sesiones
 function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   const[sessions,setSessions]=useState([]);
   const[weekPlan,setWeekPlan]=useState({});
-  const[view,setView]=useState("week");       // "week" | "session_list" | "session_edit"
+  const[view,setView]=useState("week");
   const[editSession,setEditSession]=useState(null);
-  const[showPicker,setShowPicker]=useState(null); // { blockIdx, exIdx }
+  const[showPicker,setShowPicker]=useState(null);
   const[showBlockType,setShowBlockType]=useState(false);
   const[showTypeInfo,setShowTypeInfo]=useState(null);
   const[selectedDay,setSelectedDay]=useState(null);
-  const[confirmPasteDay,setConfirmPasteDay]=useState(false); // confirmar reemplazar sesión al pegar
-  const[copyFlash,setCopyFlash]=useState(false); // feedback visual al copiar
+  const[confirmPasteDay,setConfirmPasteDay]=useState(false);
+  const[copyFlash,setCopyFlash]=useState(false);
   const DIAS=["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"];
 
   useEffect(()=>{(async()=>{const s=await loadSessions(),w=await loadWeekPlan();setSessions(s);setWeekPlan(w);})();},[]);
@@ -452,18 +496,15 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   const saveSes=async(updated)=>{setSessions(updated);await saveSessions(updated);};
   const saveWP=async(updated)=>{setWeekPlan(updated);await saveWeekPlan(updated);};
 
-  // Crear sesión nueva vacía
   const createSession=async(type)=>{
     const s={id:Date.now().toString(),name:"Nueva sesión",blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
     const updated=[...sessions,s];await saveSes(updated);setEditSession(s);setView("session_edit");setShowBlockType(false);
   };
 
-  // Asignar sesión a día
   const assignToDay=async(dayIdx,sessionId)=>{
     const wp={...weekPlan,[dayIdx]:sessionId||null};await saveWP(wp);setSelectedDay(null);
   };
 
-  // Pegar sesión desde clipboard
   const pasteSession=async(dayIdx)=>{
     if(!clipboard)return;
     const newBlocks=clipboard.blocks.map(b=>({...b,id:Date.now().toString()+Math.random().toString(36).slice(2),exercises:b.exercises.map(e=>({...e}))}));
@@ -474,7 +515,6 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
     setConfirmPasteDay(false);setSelectedDay(null);
   };
 
-  // Guardar sesión editada
   const saveEditSession=async(updated)=>{
     const all=sessions.map(s=>s.id===updated.id?updated:s);setEditSession(updated);await saveSes(all);
   };
@@ -489,11 +529,9 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FF4D4D",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
 
-      {/* Almanaque */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"6px",marginBottom:"20px"}}>
         {DIAS.map((d,i)=>{
           const sid=weekPlan[i],ses=sessions.find(s=>s.id===sid),esHoy=i===hoy,hasSession=!!ses;
-          const col=hasSession?"#FF4D4D":"rgba(255,255,255,0.05)";
           return(<div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"4px"}}>
             <div style={{fontSize:"9px",letterSpacing:"1px",color:esHoy?"#FF4D4D":"#555"}}>{d}</div>
             <button onClick={()=>setSelectedDay(selectedDay===i?null:i)} style={{width:"100%",aspectRatio:"1",borderRadius:"10px",border:`1px solid ${esHoy?"#FF4D4D33":hasSession?"#FF4D4D44":"rgba(255,255,255,0.07)"}`,background:selectedDay===i?"rgba(255,77,77,0.15)":hasSession?"rgba(255,77,77,0.08)":"rgba(255,255,255,0.02)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"2px",padding:"4px"}}>
@@ -504,15 +542,11 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         })}
       </div>
 
-      {/* Panel del día seleccionado */}
       {selectedDay!==null&&<div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"14px",marginBottom:"16px"}}>
         <div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>{DIAS[selectedDay]} — {weekPlan[selectedDay]?`SESIÓN ASIGNADA`:"SIN SESIÓN"}</div>
         {weekPlan[selectedDay]&&<div>
-          {/* Nombre de sesión */}
           <div style={{fontFamily:"sans-serif",fontSize:"15px",color:"#fff",marginBottom:"4px",letterSpacing:"1px"}}>SESIÓN: {sessions.find(s=>s.id===weekPlan[selectedDay])?.name}</div>
           <div style={{height:"1px",background:"rgba(255,255,255,0.1)",marginBottom:"12px"}}/>
-          
-          {/* Preview de bloques */}
           {sessions.find(s=>s.id===weekPlan[selectedDay])?.blocks.map((block,bi)=>{
             const bt=BLOCK_TYPES[block.type];
             const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
@@ -527,8 +561,6 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
               <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginLeft:"12px",marginTop:"4px"}}>Descanso: {block.restAfter}s</div>
             </div>);
           })}
-
-          {/* Botones */}
           <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses)onStartSession(ses);}} style={{width:"100%",padding:"14px",background:"#4caf50",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px",marginTop:"8px"}}>▶ ARRANCAR HOY</button>
           <button onClick={()=>assignToDay(selectedDay,null)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,77,77,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FF4D4D44",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>QUITAR</button>
         </div>}
@@ -540,10 +572,8 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         <button onClick={()=>setShowBlockType(true)} style={{width:"100%",marginTop:"8px",padding:"10px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN NUEVA</button>
       </div>}
 
-      {/* Botón crear sesión cuando no hay día seleccionado */}
       {selectedDay===null&&<button onClick={()=>setShowBlockType(true)} style={{width:"100%",padding:"16px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"14px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN</button>}
 
-      {/* Modal confirmar reemplazar al pegar */}
       {confirmPasteDay&&selectedDay!==null&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
         <div style={{background:"#111",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%"}}>
           <div style={{fontSize:"28px",textAlign:"center",marginBottom:"12px"}}>📋</div>
@@ -554,7 +584,6 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         </div>
       </div>}
 
-      {/* Modal elegir tipo de bloque */}
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
         <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
           <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"6px",textAlign:"center"}}>TIPO DE SESIÓN</div>
@@ -573,7 +602,6 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         </div>
       </div>}
 
-      {/* Info de tipo */}
       {showTypeInfo&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:250,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
         <div style={{background:"#111",border:`1px solid ${BLOCK_TYPES[showTypeInfo].color}44`,borderRadius:"20px",padding:"28px 24px",maxWidth:"360px",width:"100%"}}>
           <div style={{fontSize:"36px",textAlign:"center",marginBottom:"12px"}}>{BLOCK_TYPES[showTypeInfo].emoji}</div>
@@ -590,7 +618,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   if(view==="session_list"){
     return(<div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
-        <button onClick={()=>setView("week")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← SEMANA</button>
+        <button onClick={()=>setView("week")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← SEMANA</button>
         <div style={{flex:1,textAlign:"center",fontSize:"18px",letterSpacing:"4px"}}>MIS SESIONES</div>
         <button onClick={()=>setShowBlockType(true)} style={{background:"none",border:"none",color:"#FF4D4D",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>+ NUEVA</button>
       </div>
@@ -640,11 +668,9 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         <button onClick={()=>{setClipboard({blocks:ses.blocks,name:ses.name});setCopyFlash(true);setTimeout(()=>setCopyFlash(false),1500);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:"20px",padding:"0 4px",opacity:copyFlash?1:0.5,transition:"opacity 0.3s"}} title="Copiar sesión">{copyFlash?"✅":"📋"}</button>
       </div>
 
-      {/* Nombre */}
       <input value={ses.name} onChange={e=>updateName(e.target.value)} placeholder="Nombre de la sesión"
         style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"12px",color:"#fff",fontSize:"18px",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"2px",outline:"none",boxSizing:"border-box",marginBottom:"20px"}}/>
 
-      {/* Bloques */}
       {ses.blocks.map((block,bi)=>{
         const bt=BLOCK_TYPES[block.type];
         return(<div key={block.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${bt.color}33`,borderRadius:"14px",padding:"14px",marginBottom:"12px"}}>
@@ -653,16 +679,12 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
             <div style={{flex:1}}><div style={{fontSize:"13px",letterSpacing:"2px",color:bt.color}}>{bt.label}</div></div>
             <button onClick={()=>removeBlock(bi)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:"16px",padding:"0 4px"}}>✕</button>
           </div>
-
-          {/* Rondas */}
           <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
             <div style={{fontSize:"9px",letterSpacing:"3px",color:"#555",width:"60px"}}>RONDAS</div>
             <button onClick={()=>updateBlock(bi,"rounds",Math.max(1,block.rounds-1))} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${bt.color}44`,background:"transparent",color:bt.color,fontSize:"16px",cursor:"pointer"}}>−</button>
             <div style={{flex:1,textAlign:"center",fontSize:"20px",color:bt.color}}>{block.rounds}</div>
             <button onClick={()=>updateBlock(bi,"rounds",block.rounds+1)} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${bt.color}44`,background:"transparent",color:bt.color,fontSize:"16px",cursor:"pointer"}}>+</button>
           </div>
-
-          {/* Ejercicios del bloque */}
           {block.exercises.map((ex,ei)=>{
             const exData=exercises.find(e=>e.id===ex.exerciseId);
             return(<div key={ei} style={{background:"rgba(255,255,255,0.04)",borderRadius:"10px",padding:"10px",marginBottom:"8px"}}>
@@ -671,7 +693,6 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
                 <div style={{flex:1,fontSize:"13px",letterSpacing:"1px",color:exData?.color||"#fff"}}>{exData?.name?.toUpperCase()}</div>
                 <button onClick={()=>removeExFromBlock(bi,ei)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:"14px",padding:0}}>✕</button>
               </div>
-              {/* Modo: tiempo o reps */}
               <div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>
                 {["time","reps"].map(m=><button key={m} onClick={()=>updateEx(bi,ei,"mode",m)} style={{flex:1,padding:"6px",background:ex.mode===m?`${bt.color}33`:"transparent",border:`1px solid ${ex.mode===m?bt.color+"66":"rgba(255,255,255,0.1)"}`,borderRadius:"6px",color:ex.mode===m?bt.color:"#555",cursor:"pointer",fontSize:"10px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>{m==="time"?"⏱ TIEMPO":"🔢 REPS"}</button>)}
               </div>
@@ -687,11 +708,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
               </div>}
             </div>);
           })}
-
-          {/* Agregar ejercicio al bloque */}
           {block.exercises.length<bt.maxEx&&<button onClick={()=>setShowPicker({bi})} style={{width:"100%",padding:"10px",background:"transparent",border:`1px dashed ${bt.color}44`,borderRadius:"10px",color:bt.color+"88",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>+ AGREGAR EJERCICIO {block.type==="superset"?`(${block.exercises.length}/2)`:block.type==="normal"?"(1/1)":`(${block.exercises.length}/${bt.maxEx})`}</button>}
-
-          {/* Descanso después del bloque */}
           <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"10px",borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:"10px"}}>
             <div style={{fontSize:"8px",letterSpacing:"3px",color:"#444",flex:1}}>DESCANSO TRAS BLOQUE</div>
             <button onClick={()=>updateBlock(bi,"restAfter",Math.max(15,block.restAfter-15))} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"12px",cursor:"pointer"}}>−</button>
@@ -701,14 +718,13 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         </div>);
       })}
 
-      {/* Agregar bloque */}
       <button onClick={()=>setShowBlockType(true)} style={{width:"100%",padding:"14px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"12px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"12px"}}>+ AGREGAR BLOQUE</button>
 
-      {/* Guardar y arrancar */}
       <button onClick={()=>onStartSession(ses)} disabled={ses.blocks.some(b=>b.exercises.length===0)} style={{width:"100%",padding:"18px",background:ses.blocks.some(b=>b.exercises.length===0)?"rgba(255,255,255,0.05)":"#FF4D4D",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:ses.blocks.some(b=>b.exercises.length===0)?"#333":"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>▶ ARRANCAR SESIÓN</button>
-      <button onClick={()=>setView("week")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← PROGRAMA RÁPIDO</button>
 
-      {/* Modal tipo de bloque */}
+      {/* ✅ FIX: ahora va a session_list, no a week — evita pérdida de bloques */}
+      <button onClick={()=>setView("session_list")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← PROGRAMA RÁPIDO</button>
+
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
         <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
           <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE BLOQUE</div>
@@ -719,7 +735,6 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         </div>
       </div>}
 
-      {/* Picker de ejercicio */}
       {showPicker&&<ExercisePicker onSelect={(ex)=>addExToBlock(showPicker.bi,ex)} onClose={()=>setShowPicker(null)}/>}
     </div>);
   }
@@ -775,7 +790,6 @@ function ProgPrepScreen({activeSession,progBlockIdx,progRoundIdx,onReady}){
 }
 
 // ─── PAUSE OVERLAY ────────────────────────────────────────────────────────────
-// Se muestra durante el ejercicio cuando el usuario pausa
 function PauseOverlay({onResume,onSkip,onAbandon,setRestLeft,restLeft,isRest}){
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:100,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px",gap:"16px"}}>
@@ -796,9 +810,6 @@ function PauseOverlay({onResume,onSkip,onAbandon,setRestLeft,restLeft,isRest}){
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function RepCountApp(){
-  // ── SCREENS ──
-  // home | libre_select | setup | countdown | counting | rest | finished
-  // program | prog_prep | prog_counting | prog_rest | prog_done | history
   const[screen,setScreen]=useState("home");
   const[showInfo,setShowInfo]=useState(false);
   const[paused,setPaused]=useState(false);
@@ -836,19 +847,33 @@ function RepCountApp(){
   const[showFireworks,setShowFireworks]=useState(false);
   useEffect(()=>{holdPhaseRef.current=holdPhase;},[holdPhase]);
 
-  // ── CLIPBOARD (copiar/pegar sesión) ──
-  const[clipboard,setClipboard]=useState(null); // {blocks:[...],name:string} | null
+  // ── CLIPBOARD ──
+  const[clipboard,setClipboard]=useState(null);
+
+  // ── POPUP ÚLTIMA SESIÓN (libre_select) ──
+  const[libreLastSession,setLibreLastSession]=useState(null);
+  const[showLastPopup,setShowLastPopup]=useState(false);
+
+  // Cargar última sesión al entrar a libre_select
+  useEffect(()=>{
+    if(screen!=="libre_select")return;
+    (async()=>{
+      const h=await loadHistory();
+      if(h.length>0)setLibreLastSession(h[0]);
+      else setLibreLastSession(null);
+    })();
+  },[screen]);
 
   // ── PROGRAMA ──
-  const[activeSession,setActiveSession]=useState(null);  // sesión en ejecución
-  const[progBlockIdx,setProgBlockIdx]=useState(0);       // bloque actual
-  const[progRoundIdx,setProgRoundIdx]=useState(0);       // ronda actual dentro del bloque
-  const[progExIdx,setProgExIdx]=useState(0);             // ejercicio dentro del bloque (para supersets)
-  const[progReps,setProgReps]=useState(0);               // reps del ejercicio actual
-  const[progSets,setProgSets]=useState([]);              // historial reps por ronda
+  const[activeSession,setActiveSession]=useState(null);
+  const[progBlockIdx,setProgBlockIdx]=useState(0);
+  const[progRoundIdx,setProgRoundIdx]=useState(0);
+  const[progExIdx,setProgExIdx]=useState(0);
+  const[progReps,setProgReps]=useState(0);
+  const[progSets,setProgSets]=useState([]);
   const[progRestLeft,setProgRestLeft]=useState(0);
-  const[progIsRestWithin,setProgIsRestWithin]=useState(false); // descanso dentro o después de bloque
-  const[progDoneLog,setProgDoneLog]=useState([]);         // log completo al final
+  const[progIsRestWithin,setProgIsRestWithin]=useState(false);
+  const[progDoneLog,setProgDoneLog]=useState([]);
 
   const timerRef=useRef(null),spinRef=useRef(null);
 
@@ -856,7 +881,6 @@ function RepCountApp(){
 
   useEffect(()=>{seedFakeHistory();},[]);
 
-  // ── HELPERS ──
   const C=selected?.color||"#FF4D4D";
   const fmtM=(s)=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
   const isHold=!!exercises.find(e=>e.id===selected?.id)?.holdMode;
@@ -908,7 +932,6 @@ function RepCountApp(){
     },300);
   };
 
-  // Conteo para programa
   const progSimulateRep=()=>{
     if(!activeSession)return;
     const block=activeSession.blocks[progBlockIdx];
@@ -932,7 +955,6 @@ function RepCountApp(){
     return()=>clearTimeout(t);
   },[screen,countdownLeft]);
 
-  // Preload MoveNet en countdown
   useEffect(()=>{if(screen==="countdown"||screen==="prog_prep")preloadMoveNetScripts();},[screen]);
 
   // ── TIMER LIBRE ──
@@ -980,7 +1002,7 @@ function RepCountApp(){
     if(!activeSession)return;
     const block=activeSession.blocks[progBlockIdx];if(!block)return;
     const ex=block.exercises[progExIdx];if(!ex)return;
-    if(ex.mode==="reps")return; // modo reps no usa timer
+    if(ex.mode==="reps")return;
     timerRef.current=setInterval(()=>{setTimeLeft(t=>{if(t<=1){clearInterval(timerRef.current);finishProgExercise();return 0;}if(t===6)playBeep("warning");return t-1;});},1000);
     return()=>clearInterval(timerRef.current);
   },[screen,paused,progBlockIdx,progExIdx,activeSession]);
@@ -1007,13 +1029,6 @@ function RepCountApp(){
     setScreen("prog_prep");
   };
 
-  const getCurrentProgEx=()=>{
-    if(!activeSession)return null;
-    const block=activeSession.blocks[progBlockIdx];
-    if(!block)return null;
-    return block.exercises[progExIdx]||null;
-  };
-
   const finishProgExercise=(finalReps)=>{
     if(!activeSession)return;
     const block=activeSession.blocks[progBlockIdx];
@@ -1025,25 +1040,20 @@ function RepCountApp(){
     const nextExIdx=progExIdx+1;
 
     if(isSuperset&&nextExIdx<block.exercises.length){
-      // Siguiente ejercicio dentro del bloque (superserie)
       setProgExIdx(nextExIdx);
       if(block.restWithin>0){setProgRestLeft(block.restWithin);setProgIsRestWithin(true);setScreen("prog_rest");}
       else{const nextEx=block.exercises[nextExIdx];setTimeLeft(nextEx.duration||120);setScreen("prog_counting");}
     }else{
-      // Terminó todos los ejercicios del bloque — siguiente ronda o siguiente bloque
       const nextRound=progRoundIdx+1;
       if(nextRound<block.rounds){
         setProgRoundIdx(nextRound);setProgExIdx(0);
-        // Descanso entre rondas del mismo bloque (solo normal usa esto)
         setProgRestLeft(restDuration);setProgIsRestWithin(false);setScreen("prog_rest");
       }else{
-        // Terminó todas las rondas del bloque — siguiente bloque
         const nextBlock=progBlockIdx+1;
         if(nextBlock<activeSession.blocks.length){
           setProgBlockIdx(nextBlock);setProgRoundIdx(0);setProgExIdx(0);
           setProgRestLeft(block.restAfter);setProgIsRestWithin(false);setScreen("prog_rest");
         }else{
-          // Terminó toda la sesión
           setScreen("prog_done");playBeep("victory");
         }
       }
@@ -1062,23 +1072,69 @@ function RepCountApp(){
 
   // ── SCREENS ──────────────────────────────────────────────────────────────────
 
-  // HISTORY
   if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>setScreen("home")}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
 
-  // PROGRAMA
   if(screen==="program")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}><div style={{width:"100%",maxWidth:"420px"}}><ProgramScreen onBack={()=>setScreen("home")} onStartSession={(ses)=>{startProgram(ses);}} clipboard={clipboard} setClipboard={setClipboard}/></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
 
-  // LIBRE SELECT — elegir ejercicio en modo libre
-  if(screen==="libre_select")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px"}}><div style={{width:"100%",maxWidth:"420px"}}><div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}><button onClick={()=>setScreen("home")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button><div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>ELEGIR EJERCICIO</div></div><div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>{[{id:"series",label:"📋 SERIES",desc:"Sets + descanso + tiempo"},{id:"libre",label:"⏱ LIBRE",desc:"Cronómetro libre"}].map(m=>{const active=mode===m.id;return(<button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"12px 10px",background:active?"#FF4D4D":"rgba(255,255,255,0.03)",border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`,borderRadius:"12px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}><div style={{fontSize:"14px",letterSpacing:"2px",color:active?"#000":"#555",fontFamily:"'Bebas Neue',sans-serif"}}>{m.label}</div><div style={{fontFamily:"sans-serif",fontSize:"9px",color:active?"#00000077":"#333",marginTop:"3px"}}>{m.desc}</div></button>);})}</div>
-    <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-      {categories.map(cat=><CategoryItem key={cat.id} cat={cat} onSelect={async(ex)=>{await selectExercise(ex);setScreen("setup");}}/>)}
-    </div></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
+  // ── LIBRE SELECT ──
+  // ✅ Botón volver celeste + popup última sesión + botón historial
+  if(screen==="libre_select")return(
+    <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px"}}>
+      <div style={{width:"100%",maxWidth:"420px"}}>
+
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
+          <button onClick={()=>setScreen("home")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
+          <div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>ELEGIR EJERCICIO</div>
+        </div>
+
+        {/* Selector de modo */}
+        <div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>
+          {[{id:"series",label:"📋 SERIES",desc:"Sets + descanso + tiempo"},{id:"libre",label:"⏱ LIBRE",desc:"Cronómetro libre"}].map(m=>{
+            const active=mode===m.id;
+            return(<button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"12px 10px",background:active?"#FF4D4D":"rgba(255,255,255,0.03)",border:`1px solid ${active?"#FF4D4D":"rgba(255,255,255,0.07)"}`,borderRadius:"12px",cursor:"pointer",transition:"all 0.2s",textAlign:"center"}}>
+              <div style={{fontSize:"14px",letterSpacing:"2px",color:active?"#000":"#555",fontFamily:"'Bebas Neue',sans-serif"}}>{m.label}</div>
+              <div style={{fontFamily:"sans-serif",fontSize:"9px",color:active?"#00000077":"#333",marginTop:"3px"}}>{m.desc}</div>
+            </button>);
+          })}
+        </div>
+
+        {/* Categorías */}
+        <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"20px"}}>
+          {categories.map(cat=><CategoryItem key={cat.id} cat={cat} onSelect={async(ex)=>{await selectExercise(ex);setScreen("setup");}}/>)}
+        </div>
+
+        {/* Botones inferiores: Última sesión + Historial */}
+        <div style={{display:"flex",gap:"8px",marginTop:"4px"}}>
+          <button
+            onClick={()=>setShowLastPopup(true)}
+            disabled={!libreLastSession}
+            style={{flex:1,padding:"12px 10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:libreLastSession?"#aaa":"#333",cursor:libreLastSession?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}>
+            <span style={{fontSize:"14px"}}>📋</span>
+            <span style={{fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>ÚLTIMA SESIÓN</span>
+          </button>
+          <button
+            onClick={()=>setScreen("history")}
+            style={{flex:1,padding:"12px 10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#aaa",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:"6px"}}>
+            <span style={{fontSize:"14px"}}>📊</span>
+            <span style={{fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>HISTORIAL</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Popup última sesión */}
+      {showLastPopup&&libreLastSession&&(
+        <LastSessionPopup session={libreLastSession} onClose={()=>setShowLastPopup(false)}/>
+      )}
+
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
+    </div>
+  );
 
   return(
     <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px",position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:`radial-gradient(circle, ${C}22 0%, transparent 70%)`,pointerEvents:"none",transition:"background 0.5s"}}/>
 
-      {/* PR BADGE */}
       {prBroken&&<div style={{position:"fixed",top:"20px",left:"50%",transform:"translateX(-50%)",zIndex:999,background:"linear-gradient(135deg,#FFD700,#FF8C00)",borderRadius:"30px",padding:"8px 20px",display:"flex",alignItems:"center",gap:"8px",boxShadow:"0 0 30px #FFD70088",animation:"prPop 0.4s ease-out"}}><span style={{fontSize:"18px"}}>🏆</span><span style={{fontSize:"14px",letterSpacing:"3px",color:"#000",fontFamily:"'Bebas Neue',sans-serif"}}>NUEVO RECORD · {reps} REPS</span></div>}
 
       {/* ── HOME ── */}
@@ -1090,8 +1146,6 @@ function RepCountApp(){
             <button onClick={()=>setShowInfo(true)} style={{width:"32px",height:"32px",borderRadius:"50%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",color:"#666",cursor:"pointer",fontSize:"14px",display:"flex",alignItems:"center",justifyContent:"center"}}>ⓘ</button>
           </div>
         </div>
-
-        {/* Dos botones principales */}
         <div style={{display:"flex",flexDirection:"column",gap:"12px",marginBottom:"16px"}}>
           <button onClick={()=>setScreen("libre_select")} style={{padding:"24px 20px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.07)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
             <span style={{fontSize:"36px"}}>⏱</span>
@@ -1104,8 +1158,6 @@ function RepCountApp(){
             <span style={{marginLeft:"auto",fontSize:"20px",color:"#FF4D4D44"}}>›</span>
           </button>
         </div>
-
-        {/* Botón historial */}
         <button onClick={()=>setScreen("history")} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",color:"#fff"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
           <span style={{fontSize:"16px"}}>📊</span>
           <div style={{fontSize:"13px",letterSpacing:"3px",color:"#666"}}>HISTORIAL</div>
@@ -1116,7 +1168,8 @@ function RepCountApp(){
       {/* ── SETUP ── */}
       {screen==="setup"&&selected&&(<div style={{width:"100%",maxWidth:"420px",zIndex:1}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px"}}>
-          <button onClick={()=>setScreen("libre_select")} style={{background:"none",border:"none",color:"#666",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:0}}>← VOLVER</button>
+          {/* ✅ Botón volver celeste en setup */}
+          <button onClick={()=>setScreen("libre_select")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
           <div style={{display:"flex",alignItems:"center",gap:"8px"}}><span style={{fontSize:"22px"}}>{selected.icon}</span><span style={{fontSize:"20px",color:C,letterSpacing:"2px"}}>{selected.name.toUpperCase()}</span></div>
           <div style={{fontFamily:"sans-serif",fontSize:"9px",color:"#444",letterSpacing:"2px"}}>{mode==="libre"?"LIBRE":"SERIES"}</div>
         </div>
@@ -1149,7 +1202,7 @@ function RepCountApp(){
         <button onClick={launchSession} style={{marginTop:"8px",padding:"12px 32px",background:"transparent",border:`1px solid ${C}44`,borderRadius:"12px",color:"#555",fontSize:"12px",letterSpacing:"3px",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>SALTAR</button>
       </div>}
 
-      {/* ── COUNTING (libre/series) ── */}
+      {/* ── COUNTING ── */}
       {screen==="counting"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
         {paused&&<PauseOverlay onResume={()=>setPaused(false)} onSkip={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");setPaused(false);}} onAbandon={resetAll} setRestLeft={()=>{}} restLeft={0} isRest={false}/>}
         <div style={{display:"flex",gap:"6px",justifyContent:"center",marginBottom:"6px"}}>{Array.from({length:totalSets},(_,i)=><div key={i} style={{flex:1,maxWidth:i===currentSet-1?"28px":"12px",height:"5px",borderRadius:"3px",background:i<currentSet-1?C+"88":i===currentSet-1?C:"rgba(255,255,255,0.1)",boxShadow:i===currentSet-1?`0 0 8px ${C}`:"none",transition:"all 0.3s"}}/>)}</div>
@@ -1315,7 +1368,6 @@ function RepCountApp(){
         <button onClick={resetAll} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"14px",letterSpacing:"3px",color:"#777",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>IR AL INICIO</button>
       </div>}
 
-      {/* Info Modal */}
       {showInfo&&<InfoModal onClose={()=>setShowInfo(false)}/>}
 
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.min.css"/>
