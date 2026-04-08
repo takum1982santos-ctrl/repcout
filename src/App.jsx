@@ -810,6 +810,362 @@ function PauseOverlay({onResume,onSkip,onAbandon,setRestLeft,restLeft,isRest}){
     </div>
   );
 }
+// ─── CYCLE CREATOR SCREEN ────────────────────────────────────────────────────
+function CycleCreatorScreen({onBack,onCreate}){
+  const[step,setStep]=useState(1);
+  const[cycleName,setCycleName]=useState("");
+  const[workWeeks,setWorkWeeks]=useState(6);
+
+  const handleCreate=()=>{
+    const totalWeeks=workWeeks+1;
+    const newMeso={
+      cycle:{
+        id:Date.now().toString(),
+        name:cycleName.trim()||"Mi Mesociclo",
+        totalWeeks,
+        createdAt:new Date().toISOString(),
+        weeks:Array.from({length:totalWeeks},(_,i)=>({
+          weekNumber:i+1,
+          isDeload:i===totalWeeks-1,
+          days:{0:null,1:null,2:null,3:null,4:null,5:null,6:null},
+          completedDays:{0:false,1:false,2:false,3:false,4:false,5:false,6:false}
+        }))
+      },
+      sessions:{}
+    };
+    onCreate(newMeso);
+  };
+
+  if(step===1)return(
+    <div style={{width:"100%",maxWidth:"420px"}}>
+      <div style={{display:"flex",justifyContent:"center",gap:"8px",marginBottom:"24px"}}>
+        <div style={{width:"10px",height:"10px",borderRadius:"50%",background:"#FFD700"}}/>
+        <div style={{width:"10px",height:"10px",borderRadius:"50%",background:"rgba(255,255,255,0.15)"}}/>
+      </div>
+      <div style={{display:"flex",alignItems:"center",marginBottom:"28px"}}>
+        <button onClick={onBack} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
+        <div style={{flex:1,textAlign:"center",fontSize:"20px",letterSpacing:"4px"}}>NUEVO MESOCICLO</div>
+      </div>
+      <div style={{marginBottom:"24px"}}>
+        <div style={{fontSize:"10px",letterSpacing:"4px",color:"#555",marginBottom:"8px"}}>NOMBRE DEL CICLO</div>
+        <input value={cycleName} onChange={e=>setCycleName(e.target.value)} placeholder="Ej: Fuerza Enero"
+          style={{width:"100%",padding:"14px 16px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"12px",color:"#fff",fontSize:"18px",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"2px",outline:"none",boxSizing:"border-box"}}/>
+      </div>
+      <div style={{marginBottom:"32px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
+          <div style={{fontSize:"10px",letterSpacing:"4px",color:"#555"}}>DURACIÓN</div>
+          <div style={{fontSize:"11px",color:"#FFD700",letterSpacing:"2px"}}>{workWeeks} + 1 SEMANAS</div>
+        </div>
+        <input type="range" min="3" max="13" value={workWeeks} onChange={e=>setWorkWeeks(Number(e.target.value))}
+          style={{width:"100%",accentColor:"#FFD700",marginBottom:"12px"}}/>
+        <div style={{background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.25)",borderRadius:"12px",padding:"14px",textAlign:"center"}}>
+          <div style={{fontSize:"15px",letterSpacing:"2px",color:"#FFD700",marginBottom:"4px"}}>{workWeeks} sem. de trabajo · 1 sem. de descarga 😴</div>
+          <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555"}}>{workWeeks+1} semanas en total</div>
+        </div>
+      </div>
+      <button onClick={()=>setStep(2)} disabled={!cycleName.trim()}
+        style={{width:"100%",padding:"18px",background:cycleName.trim()?"#FFD700":"rgba(255,215,0,0.1)",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:cycleName.trim()?"#000":"#444",cursor:cycleName.trim()?"pointer":"default",fontFamily:"'Bebas Neue',sans-serif"}}>
+        SIGUIENTE →
+      </button>
+    </div>
+  );
+
+  return(
+    <div style={{width:"100%",maxWidth:"420px"}}>
+      <div style={{display:"flex",justifyContent:"center",gap:"8px",marginBottom:"24px"}}>
+        <div style={{width:"10px",height:"10px",borderRadius:"50%",background:"rgba(255,215,0,0.35)"}}/>
+        <div style={{width:"10px",height:"10px",borderRadius:"50%",background:"#FFD700"}}/>
+      </div>
+      <div style={{display:"flex",alignItems:"center",marginBottom:"28px"}}>
+        <button onClick={()=>setStep(1)} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← ATRÁS</button>
+        <div style={{flex:1,textAlign:"center",fontSize:"20px",letterSpacing:"4px"}}>CONFIRMAR</div>
+      </div>
+      <div style={{background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.4)",borderRadius:"16px",padding:"28px 24px",marginBottom:"24px",textAlign:"center"}}>
+        <div style={{fontSize:"36px",marginBottom:"12px"}}>📅</div>
+        <div style={{fontSize:"28px",letterSpacing:"3px",color:"#FFD700",marginBottom:"12px"}}>{cycleName}</div>
+        <div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#aaa",marginBottom:"4px"}}>{workWeeks} semanas de trabajo</div>
+        <div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#888",marginBottom:"16px"}}>+ 1 semana de descarga 😴</div>
+        <div style={{height:"1px",background:"rgba(255,215,0,0.15)",marginBottom:"12px"}}/>
+        <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555"}}>{workWeeks+1} semanas en total</div>
+      </div>
+      <button onClick={handleCreate} style={{width:"100%",padding:"18px",background:"#FFD700",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"10px"}}>✓ CREAR MESOCICLO</button>
+      <button onClick={onBack} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+    </div>
+  );
+}
+
+// ─── MESO SCREEN ──────────────────────────────────────────────────────────────
+function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
+  const DIAS=["L","M","M","J","V","S","D"];
+  const[selectedCell,setSelectedCell]=useState(null);
+  const[view,setView]=useState("almanac");
+  const[editSession,setEditSession]=useState(null);
+  const[showPicker,setShowPicker]=useState(null);
+  const[showBlockType,setShowBlockType]=useState(false);
+
+  const sessions=Object.values(mesoData?.sessions||{});
+  const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+
+  const persistMeso=async(updated)=>{await saveMeso(updated);onMesoUpdate(updated);};
+
+  const assignDay=async(weekIdx,dayIdx,sessionId)=>{
+    const u=JSON.parse(JSON.stringify(mesoData));
+    u.cycle.weeks[weekIdx].days[dayIdx]=sessionId||null;
+    await persistMeso(u);setSelectedCell(null);
+  };
+
+  const createSession=async(type)=>{
+    const s={id:Date.now().toString(),name:"Nueva sesión",blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
+    const u={...mesoData,sessions:{...mesoData.sessions,[s.id]:s}};
+    await persistMeso(u);setEditSession(s);setShowBlockType(false);setView("session_edit");
+  };
+
+  const saveEditSession=async(upd)=>{
+    const u={...mesoData,sessions:{...mesoData.sessions,[upd.id]:upd}};
+    setEditSession(upd);await persistMeso(u);
+  };
+
+  const addBlock=async(type)=>{
+    if(!editSession)return;
+    const b={id:Date.now().toString(),type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter};
+    await saveEditSession({...editSession,blocks:[...editSession.blocks,b]});
+    setShowBlockType(false);
+  };
+  const removeBlock=async(bi)=>{if(!editSession)return;await saveEditSession({...editSession,blocks:editSession.blocks.filter((_,i)=>i!==bi)});};
+  const updateBlock=async(bi,field,val)=>{if(!editSession)return;const b=[...editSession.blocks];b[bi]={...b[bi],[field]:val};await saveEditSession({...editSession,blocks:b});};
+  const addExToBlock=async(bi,ex)=>{
+    if(!editSession)return;
+    const b=[...editSession.blocks];const bt=BLOCK_TYPES[b[bi].type];
+    if(b[bi].exercises.length>=bt.maxEx)return;
+    const def=exerciseDefaults[ex.id]||{duration:120};
+    b[bi].exercises=[...b[bi].exercises,{exerciseId:ex.id,duration:def.duration,mode:"time"}];
+    await saveEditSession({...editSession,blocks:b});setShowPicker(null);
+  };
+  const removeExFromBlock=async(bi,ei)=>{if(!editSession)return;const b=[...editSession.blocks];b[bi].exercises=b[bi].exercises.filter((_,i)=>i!==ei);await saveEditSession({...editSession,blocks:b});};
+  const updateEx=async(bi,ei,field,val)=>{if(!editSession)return;const b=[...editSession.blocks];b[bi].exercises[ei]={...b[bi].exercises[ei],[field]:val};await saveEditSession({...editSession,blocks:b});};
+
+  // ── Vista editor de sesión ──
+  if(view==="session_edit"&&editSession){
+    const ses=editSession;
+    return(
+      <div style={{width:"100%",maxWidth:"420px"}}>
+        <div style={{display:"flex",alignItems:"center",marginBottom:"20px"}}>
+          <button onClick={()=>setView("almanac")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← MESOCICLO</button>
+          <div style={{flex:1,textAlign:"center",fontSize:"14px",letterSpacing:"4px"}}>EDITAR SESIÓN</div>
+        </div>
+        <input value={ses.name} onChange={e=>saveEditSession({...ses,name:e.target.value})} placeholder="Nombre de la sesión"
+          style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"12px",color:"#fff",fontSize:"18px",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"2px",outline:"none",boxSizing:"border-box",marginBottom:"20px"}}/>
+        {ses.blocks.map((block,bi)=>{
+          const bt=BLOCK_TYPES[block.type];
+          return(
+            <div key={block.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${bt.color}33`,borderRadius:"14px",padding:"14px",marginBottom:"12px"}}>
+              <div style={{display:"flex",alignItems:"center",marginBottom:"12px"}}>
+                <span style={{fontSize:"18px",marginRight:"8px"}}>{bt.emoji}</span>
+                <div style={{flex:1,fontSize:"13px",letterSpacing:"2px",color:bt.color}}>{bt.label}</div>
+                <button onClick={()=>removeBlock(bi)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:"16px",padding:"0 4px"}}>✕</button>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
+                <div style={{fontSize:"9px",letterSpacing:"3px",color:"#555",width:"60px"}}>RONDAS</div>
+                <button onClick={()=>updateBlock(bi,"rounds",Math.max(1,block.rounds-1))} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${bt.color}44`,background:"transparent",color:bt.color,fontSize:"16px",cursor:"pointer"}}>−</button>
+                <div style={{flex:1,textAlign:"center",fontSize:"20px",color:bt.color}}>{block.rounds}</div>
+                <button onClick={()=>updateBlock(bi,"rounds",block.rounds+1)} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${bt.color}44`,background:"transparent",color:bt.color,fontSize:"16px",cursor:"pointer"}}>+</button>
+              </div>
+              {block.exercises.map((ex,ei)=>{
+                const exData=exercises.find(e=>e.id===ex.exerciseId);
+                return(
+                  <div key={ei} style={{background:"rgba(255,255,255,0.04)",borderRadius:"10px",padding:"10px",marginBottom:"8px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}}>
+                      <span style={{fontSize:"18px"}}>{exData?.icon}</span>
+                      <div style={{flex:1,fontSize:"13px",letterSpacing:"1px",color:exData?.color||"#fff"}}>{exData?.name?.toUpperCase()}</div>
+                      <button onClick={()=>removeExFromBlock(bi,ei)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:"14px",padding:0}}>✕</button>
+                    </div>
+                    <div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>
+                      {["time","reps"].map(m=><button key={m} onClick={()=>updateEx(bi,ei,"mode",m)} style={{flex:1,padding:"6px",background:ex.mode===m?`${bt.color}33`:"transparent",border:`1px solid ${ex.mode===m?bt.color+"66":"rgba(255,255,255,0.1)"}`,borderRadius:"6px",color:ex.mode===m?bt.color:"#555",cursor:"pointer",fontSize:"10px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>{m==="time"?"⏱ TIEMPO":"🔢 REPS"}</button>)}
+                    </div>
+                    {ex.mode==="time"&&<div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                      <button onClick={()=>updateEx(bi,ei,"duration",Math.max(15,ex.duration-15))} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>−</button>
+                      <div style={{flex:1,textAlign:"center",fontSize:"16px",color:"#fff"}}>{toMmSs(ex.duration)}</div>
+                      <button onClick={()=>updateEx(bi,ei,"duration",ex.duration+15)} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>+</button>
+                    </div>}
+                    {ex.mode==="reps"&&<div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                      <button onClick={()=>updateEx(bi,ei,"targetReps",Math.max(1,(ex.targetReps||10)-1))} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>−</button>
+                      <div style={{flex:1,textAlign:"center",fontSize:"16px",color:"#fff"}}>{ex.targetReps||10} <span style={{fontSize:"11px",color:"#555"}}>reps</span></div>
+                      <button onClick={()=>updateEx(bi,ei,"targetReps",(ex.targetReps||10)+1)} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>+</button>
+                    </div>}
+                  </div>
+                );
+              })}
+              {block.exercises.length<bt.maxEx&&<button onClick={()=>setShowPicker({bi})} style={{width:"100%",padding:"10px",background:"transparent",border:`1px dashed ${bt.color}44`,borderRadius:"10px",color:bt.color+"88",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>+ AGREGAR EJERCICIO</button>}
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"10px",borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:"10px"}}>
+                <div style={{fontSize:"8px",letterSpacing:"3px",color:"#444",flex:1}}>DESCANSO TRAS BLOQUE</div>
+                <button onClick={()=>updateBlock(bi,"restAfter",Math.max(15,block.restAfter-15))} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"12px",cursor:"pointer"}}>−</button>
+                <div style={{fontSize:"14px",color:"#fff",minWidth:"36px",textAlign:"center"}}>{block.restAfter}s</div>
+                <button onClick={()=>updateBlock(bi,"restAfter",block.restAfter+15)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"12px",cursor:"pointer"}}>+</button>
+              </div>
+            </div>
+          );
+        })}
+        <button onClick={()=>setShowBlockType(true)} style={{width:"100%",padding:"14px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"12px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"12px"}}>+ AGREGAR BLOQUE</button>
+        <button onClick={()=>onStartSession(ses,selectedCell?.weekIdx,selectedCell?.dayIdx)}
+          disabled={ses.blocks.some(b=>b.exercises.length===0)}
+          style={{width:"100%",padding:"18px",background:ses.blocks.some(b=>b.exercises.length===0)?"rgba(255,255,255,0.05)":"#FFD700",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:ses.blocks.some(b=>b.exercises.length===0)?"#333":"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"10px"}}>▶ ARRANCAR SESIÓN</button>
+        <button onClick={()=>setView("almanac")} style={{width:"100%",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← MESOCICLO</button>
+        {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
+            <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE BLOQUE</div>
+            <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
+              {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>addBlock(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
+            </div>
+            <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+          </div>
+        </div>}
+        {showPicker&&<ExercisePicker onSelect={(ex)=>addExToBlock(showPicker.bi,ex)} onClose={()=>setShowPicker(null)}/>}
+      </div>
+    );
+  }
+
+  // ── Vista almanaque ──
+  if(!mesoData||!mesoData.cycle)return null;
+  const{cycle}=mesoData;
+  const selWeek=selectedCell?cycle.weeks[selectedCell.weekIdx]:null;
+  const selSid=selWeek?selWeek.days[selectedCell.dayIdx]:null;
+  const selSession=selSid?mesoData.sessions[selSid]:null;
+
+  return(
+    <div style={{width:"100%",maxWidth:"420px"}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:"20px"}}>
+        <button onClick={onBack} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
+        <div style={{flex:1,textAlign:"center"}}>
+          <div style={{fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>{cycle.name.toUpperCase()}</div>
+          <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>📅 MESOCICLO · {cycle.totalWeeks} semanas</div>
+        </div>
+      </div>
+
+      {/* Header días */}
+      <div style={{display:"grid",gridTemplateColumns:"40px repeat(7,1fr)",gap:"4px",marginBottom:"6px"}}>
+        <div/>
+        {DIAS.map((d,i)=><div key={i} style={{textAlign:"center",fontSize:"9px",letterSpacing:"1px",color:"#444"}}>{d}</div>)}
+      </div>
+
+      {/* Grilla scrolleable */}
+      <div style={{maxHeight:"320px",overflowY:"auto",marginBottom:"16px",paddingRight:"2px"}}>
+        {cycle.weeks.map((week,wi)=>(
+          <div key={wi} style={{display:"grid",gridTemplateColumns:"40px repeat(7,1fr)",gap:"4px",marginBottom:"4px"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{fontSize:week.isDeload?"14px":"8px",color:week.isDeload?"#FFD700":"#444",textAlign:"center",lineHeight:1}}>
+                {week.isDeload?"😴":`S${week.weekNumber}`}
+              </div>
+            </div>
+            {[0,1,2,3,4,5,6].map(di=>{
+              const sid=week.days[di];
+              const done=week.completedDays[di];
+              const isSelected=selectedCell?.weekIdx===wi&&selectedCell?.dayIdx===di;
+              let emoji="─",fg="#333",bg="rgba(255,255,255,0.02)",border="rgba(255,255,255,0.06)";
+              if(done){emoji="✓";fg="#4a9eff";bg="rgba(74,158,255,0.1)";border="rgba(74,158,255,0.3)";}
+              else if(sid&&week.isDeload){emoji="😴";fg="#FFD700";bg="rgba(255,215,0,0.06)";border="rgba(255,215,0,0.2)";}
+              else if(sid){emoji="🏋";bg="rgba(255,215,0,0.06)";border="rgba(255,215,0,0.2)";}
+              if(isSelected){bg="rgba(255,215,0,0.18)";border="#FFD700";}
+              return(
+                <button key={di} onClick={()=>setSelectedCell(isSelected?null:{weekIdx:wi,dayIdx:di})}
+                  style={{aspectRatio:"1",borderRadius:"8px",border:`1px solid ${border}`,background:bg,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:sid||done?"14px":"10px",color:fg,transition:"all 0.15s",padding:0}}>
+                  {emoji}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Panel día seleccionado */}
+      {selectedCell&&<div style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${selSession?"rgba(255,215,0,0.35)":"rgba(255,255,255,0.1)"}`,borderRadius:"16px",padding:"16px",marginBottom:"16px"}}>
+        <div style={{fontSize:"10px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>
+          {["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"][selectedCell.dayIdx]} · SEM {selectedCell.weekIdx+1}
+          {selWeek?.isDeload&&<span style={{color:"#FFD700"}}> · 😴 DESCARGA</span>}
+        </div>
+        {selSession?(<>
+          <div style={{fontSize:"18px",letterSpacing:"2px",color:"#FFD700",marginBottom:"4px"}}>{selSession.name}</div>
+          <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginBottom:"12px"}}>
+            {selSession.blocks.flatMap(b=>b.exercises.map(e=>exercises.find(ex=>ex.id===e.exerciseId)?.name)).filter(Boolean).join(" · ")}
+          </div>
+          <button onClick={()=>onStartSession(selSession,selectedCell.weekIdx,selectedCell.dayIdx)}
+            style={{width:"100%",padding:"14px",background:"#FFD700",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px"}}>▶ ARRANCAR</button>
+          <button onClick={()=>{setEditSession(selSession);setView("session_edit");}}
+            style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px"}}>✏️ EDITAR SESIÓN</button>
+          <button onClick={()=>assignDay(selectedCell.weekIdx,selectedCell.dayIdx,null)}
+            style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,77,77,0.2)",borderRadius:"10px",fontSize:"11px",letterSpacing:"2px",color:"rgba(255,77,77,0.45)",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>✕ QUITAR SESIÓN</button>
+        </>):(
+          <>
+            {sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"10px"}}>
+              <div style={{fontSize:"9px",letterSpacing:"3px",color:"#444",marginBottom:"4px"}}>TUS SESIONES</div>
+              {sessions.map(s=><button key={s.id} onClick={()=>assignDay(selectedCell.weekIdx,selectedCell.dayIdx,s.id)}
+                style={{padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>)}
+            </div>}
+            <button onClick={()=>setShowBlockType(true)}
+              style={{width:"100%",padding:"12px",background:"transparent",border:"1px dashed rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"3px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN NUEVA</button>
+          </>
+        )}
+      </div>}
+
+      {!selectedCell&&<button onClick={()=>setShowBlockType(true)}
+        style={{width:"100%",padding:"14px",background:"transparent",border:"1px dashed rgba(255,215,0,0.2)",borderRadius:"14px",fontSize:"13px",letterSpacing:"3px",color:"rgba(255,215,0,0.6)",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>
+        + CREAR SESIÓN
+      </button>}
+
+      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+        <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
+          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div>
+          <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
+            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
+          </div>
+          <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+// ─── MESO DONE SCREEN ─────────────────────────────────────────────────────────
+function MesoDoneScreen({session,weekNumber,progDoneLog,onRepeat,onBack,onUnmark}){
+  const[confirmUnmark,setConfirmUnmark]=useState(false);
+  const totalReps=progDoneLog.reduce((a,b)=>a+b.reps,0);
+  return(
+    <div style={{width:"100%",maxWidth:"420px",textAlign:"center"}}>
+      <div style={{fontSize:"13px",letterSpacing:"6px",color:"#FFD700",marginBottom:"6px"}}>SESIÓN COMPLETADA 🎉</div>
+      <div style={{fontSize:"20px",letterSpacing:"3px",marginBottom:"4px"}}>{session?.name?.toUpperCase()}</div>
+      <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555",marginBottom:"20px"}}>Semana {weekNumber}</div>
+      <div style={{background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"14px",padding:"16px",marginBottom:"16px"}}>
+        <div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"4px"}}>TOTAL REPS</div>
+        <div style={{fontSize:"72px",lineHeight:1,color:"#FFD700",textShadow:"0 0 40px #FFD70088"}}>{totalReps}</div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"16px"}}>
+        {progDoneLog.map((item,i)=>{
+          const ex=exercises.find(e=>e.id===item.exerciseId);
+          const Cx=ex?.color||"#FFD700";
+          return(<div key={i} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${Cx}33`,borderRadius:"12px",padding:"12px 16px",display:"flex",alignItems:"center",gap:"12px"}}>
+            <span style={{fontSize:"20px"}}>{ex?.icon}</span>
+            <div style={{flex:1,textAlign:"left",fontSize:"14px",letterSpacing:"2px",color:Cx}}>{ex?.name?.toUpperCase()}</div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:"28px",color:Cx,lineHeight:1}}>{item.reps}</div><div style={{fontSize:"8px",color:"#555",letterSpacing:"2px"}}>REPS</div></div>
+          </div>);
+        })}
+      </div>
+      <div style={{display:"inline-flex",alignItems:"center",gap:"6px",background:"rgba(74,158,255,0.12)",border:"1px solid rgba(74,158,255,0.4)",borderRadius:"20px",padding:"6px 16px",marginBottom:"20px"}}>
+        <span style={{fontSize:"12px"}}>✅</span>
+        <span style={{fontSize:"11px",letterSpacing:"3px",color:"#4a9eff"}}>DÍA MARCADO COMPLETO</span>
+      </div>
+      <button onClick={onRepeat} style={{width:"100%",padding:"18px",background:"#FFD700",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>REPETIR SESIÓN</button>
+      <button onClick={onBack} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"14px",letterSpacing:"3px",color:"#777",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"16px"}}>← VOLVER AL MESOCICLO</button>
+      {confirmUnmark
+        ?<div style={{background:"rgba(255,77,77,0.08)",border:"1px solid rgba(255,77,77,0.3)",borderRadius:"12px",padding:"14px"}}>
+          <div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#ccc",marginBottom:"10px"}}>¿Seguro que querés desmarcar este día?</div>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button onClick={()=>setConfirmUnmark(false)} style={{flex:1,padding:"10px",background:"rgba(255,255,255,0.05)",border:"1px solid #333",borderRadius:"8px",color:"#888",cursor:"pointer",fontSize:"13px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+            <button onClick={onUnmark} style={{flex:1,padding:"10px",background:"#FF4D4D",border:"none",borderRadius:"8px",color:"#000",cursor:"pointer",fontSize:"13px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>DESMARCAR</button>
+          </div>
+        </div>
+        :<button onClick={()=>setConfirmUnmark(true)} style={{padding:"6px 16px",background:"transparent",border:"1px solid rgba(255,77,77,0.2)",borderRadius:"20px",fontSize:"10px",letterSpacing:"2px",color:"rgba(255,77,77,0.45)",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>desmarcar día</button>}
+    </div>
+  );
+}
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function RepCountApp(){
