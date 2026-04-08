@@ -102,6 +102,7 @@ const PR_KEY         = "repcount-prs";
 const ROUTINES_KEY   = "repcount-routines";
 const SESSIONS_KEY   = "repcount-sessions-v2";
 const WEEKPLAN_KEY   = "repcount-weekplan-v2";
+const MESO_KEY       = "repcount-meso-v1";
 
 async function loadHistory() { try { const r=await window.storage.get(STORAGE_KEY);return r?JSON.parse(r.value):[]; }catch{return [];} }
 async function saveSession(session) { try{const h=await loadHistory();const u=[session,...h].slice(0,100);await window.storage.set(STORAGE_KEY,JSON.stringify(u));return u;}catch{return null;} }
