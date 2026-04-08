@@ -117,6 +117,8 @@ async function saveSessions(s) { try{await window.storage.set(SESSIONS_KEY,JSON.
 
 async function loadWeekPlan() { try{const r=await window.storage.get(WEEKPLAN_KEY);return r?JSON.parse(r.value):{};}catch{return {};} }
 async function saveWeekPlan(p) { try{await window.storage.set(WEEKPLAN_KEY,JSON.stringify(p));}catch{} }
+async function loadMeso() { try{const r=await window.storage.get(MESO_KEY);return r?JSON.parse(r.value):null;}catch{return null;} }
+async function saveMeso(m) { try{await window.storage.set(MESO_KEY,JSON.stringify(m));}catch{} }
 
 const daysAgo=n=>new Date(Date.now()-n*86400000).toISOString();
 const FAKE_HISTORY=[
