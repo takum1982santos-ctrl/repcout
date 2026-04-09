@@ -632,7 +632,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
           return(<div key={ses.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"14px 16px"}}>
             <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
               <div style={{flex:1}}><div style={{fontSize:"18px",letterSpacing:"2px"}}>{ses.name}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{blockCount} bloque{blockCount!==1?"s":""} · {exCount} ejercicio{exCount!==1?"s":""}</div></div>
-              <button onClick={()=>{setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:"13px",letterSpacing:"2px",padding:"4px 8px",fontFamily:"'Bebas Neue',sans-serif"}}>EDITAR</button>
+ <button onClick={(e)=>{e.stopPropagation();setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"1px solid rgba(255,255,255,0.1)",color:"#555",cursor:"pointer",fontSize:"18px",padding:"6px 10px",borderRadius:"8px",lineHeight:1}}>✏️</button>
               <button onClick={async()=>{const updated=sessions.filter(s=>s.id!==ses.id);await saveSes(updated);}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
             </div>
             <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
