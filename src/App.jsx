@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Component } from "react";
 
-// MAPA App-41.2
+// MAPA App-42.0
 // ├── ErrorBoundary
 // ├── DATA (categorías, ejercicios, pasos, defaults)
 // ├── BLOCK_TYPES (normal/superset/giantset)
@@ -11,11 +11,12 @@ import { useState, useEffect, useRef, Component } from "react";
 // ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes + fix bug volver)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
 //
-// CAMBIOS EN App-41.2:
+// CAMBIOS EN App-42.0:
 // ✅ Bug fix: "← PROGRAMA RÁPIDO" ya no borra bloques (va a session_list)
 // ✅ Botones celestes (#4a9eff) en libre_select y setup
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
+// ✅ se agrego mesosiclo
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -1215,6 +1216,10 @@ function RepCountApp(){
 
   // ── HISTORIAL: desde dónde se abrió ──
   const[historyFrom,setHistoryFrom]=useState("home");
+  const[mesoData,setMesoData]=useState(null);
+  const[mesoWeekIdx,setMesoWeekIdx]=useState(null);
+  const[mesoDayIdx,setMesoDayIdx]=useState(null);
+  const[progSource,setProgSource]=useState("program");
 
   // ── POPUP ÚLTIMA SESIÓN (libre_select) ──
   const[libreLastSession,setLibreLastSession]=useState(null);
@@ -1246,6 +1251,7 @@ function RepCountApp(){
   const[particles]=useState(()=>Array.from({length:24},(_,i)=>({id:i,angle:(i/24)*360,distance:80+Math.random()*120,color:["#FF4D4D","#FFD700","#00C9A7","#6C63FF","#FF8C00","#00BFFF"][i%6],size:4+Math.random()*6})));
 
   useEffect(()=>{seedFakeHistory();},[]);
+  useEffect(()=>{(async()=>{const m=await loadMeso();setMesoData(m);})();},[]);
 
   const C=selected?.color||"#FF4D4D";
   const fmtM=(s)=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
@@ -1379,6 +1385,16 @@ function RepCountApp(){
     setShowFireworks(true);const t=setTimeout(()=>setShowFireworks(false),2500);
     return()=>clearTimeout(t);
   },[screen]);
+  // ── MARCAR DÍA MESO ──
+  useEffect(()=>{
+    if(screen!=="prog_done"||progSource!=="meso")return;
+    if(mesoWeekIdx===null||mesoDayIdx===null){setScreen("meso_done");return;}
+    (async()=>{
+      const u=JSON.parse(JSON.stringify(mesoData));
+      u.cycle.weeks[mesoWeekIdx].completedDays[mesoDayIdx]=true;
+      await saveMeso(u);setMesoData(u);setScreen("meso_done");
+    })();
+  },[screen,progSource]);
 
   // ── SAVE libre/series ──
   useEffect(()=>{
@@ -1389,10 +1405,16 @@ function RepCountApp(){
   },[screen]);
 
   // ── LÓGICA PROGRAMA ──
-  const startProgram=(session)=>{
+  const startProgram=(session,source="program")=>{
+    setProgSource(source);
     setActiveSession(session);setProgBlockIdx(0);setProgRoundIdx(0);setProgExIdx(0);
     setProgReps(0);setProgSets([]);setProgDoneLog([]);setPaused(false);
     setScreen("prog_prep");
+  };
+
+  const startMesoSession=(session,weekIdx,dayIdx)=>{
+    setMesoWeekIdx(weekIdx??null);setMesoDayIdx(dayIdx??null);
+    startProgram(session,"meso");
   };
 
   const finishProgExercise=(finalReps)=>{
@@ -1437,6 +1459,45 @@ function RepCountApp(){
   };
 
   // ── SCREENS ──────────────────────────────────────────────────────────────────
+
+  if(screen==="meso_creator")return(
+    <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}>
+      <div style={{width:"100%",maxWidth:"420px"}}>
+        <CycleCreatorScreen onBack={()=>setScreen("home")} onCreate={async(newMeso)=>{await saveMeso(newMeso);setMesoData(newMeso);setScreen("meso");}}/>
+      </div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
+    </div>
+  );
+
+  if(screen==="meso")return(
+    <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}>
+      <div style={{width:"100%",maxWidth:"420px"}}>
+        <MesoScreen onBack={()=>setScreen("home")} onStartSession={startMesoSession} mesoData={mesoData} onMesoUpdate={(u)=>setMesoData(u)}/>
+      </div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
+    </div>
+  );
+
+  if(screen==="meso_done")return(
+    <div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",overflow:"hidden"}}>
+      <div style={{width:"100%",maxWidth:"420px"}}>
+        <MesoDoneScreen
+          session={activeSession}
+          weekNumber={mesoWeekIdx!==null?mesoWeekIdx+1:null}
+          progDoneLog={progDoneLog}
+          onRepeat={()=>startMesoSession(activeSession,mesoWeekIdx,mesoDayIdx)}
+          onBack={()=>{resetAll();setScreen("meso");}}
+          onUnmark={async()=>{
+            if(mesoWeekIdx===null||mesoDayIdx===null)return;
+            const u=JSON.parse(JSON.stringify(mesoData));
+            u.cycle.weeks[mesoWeekIdx].completedDays[mesoDayIdx]=false;
+            await saveMeso(u);setMesoData(u);resetAll();setScreen("meso");
+          }}
+        />
+      </div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
+    </div>
+  );
 
   if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>{setScreen(historyFrom);setHistoryFrom("home");}}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
 
@@ -1522,6 +1583,11 @@ function RepCountApp(){
             <span style={{fontSize:"36px"}}>📋</span>
             <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FF4D4D"}}>PROGRAMA RÁPIDO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>Sesiones planificadas · La app te guía sola</div></div>
             <span style={{marginLeft:"auto",fontSize:"20px",color:"#FF4D4D44"}}>›</span>
+          </button>
+        <button onClick={()=>setScreen(mesoData?"meso":"meso_creator")} style={{padding:"24px 20px",background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.25)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,215,0,0.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,215,0,0.08)"}>
+            <span style={{fontSize:"36px"}}>📅</span>
+            <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FFD700"}}>MESOCICLO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>{mesoData?`${mesoData.cycle.name} · ${mesoData.cycle.totalWeeks} semanas`:"Ciclo multi-semana con progresión"}</div></div>
+            <span style={{marginLeft:"auto",fontSize:"20px",color:"rgba(255,215,0,0.44)"}}>›</span>
           </button>
         </div>
         <button onClick={()=>setScreen("history")} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",color:"#fff"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
