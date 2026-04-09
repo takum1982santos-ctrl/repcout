@@ -305,6 +305,10 @@ function formatDateShort(iso){const d=new Date(iso);return`${d.getDate()}-${d.ge
 // ─── HISTORY SCREEN ───────────────────────────────────────────────────────────
 function HistoryScreen({onBack}){
   const[history,setHistory]=useState([]);
+const[mesoData,setMesoData]=useState(null);
+const[mesoWeekIdx,setMesoWeekIdx]=useState(null);
+const[mesoDayIdx,setMesoDayIdx]=useState(null);
+const[progSource,setProgSource]=useState("program");
   const[confirmClear,setConfirmClear]=useState(false);
   const[detail,setDetail]=useState(null);
   useEffect(()=>{(async()=>{await seedFakeHistory();const h=await loadHistory();setHistory(h);})();},[]);
