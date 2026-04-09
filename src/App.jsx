@@ -315,6 +315,7 @@ const[progSource,setProgSource]=useState("program");
   const handleClear=async()=>{await clearHistory();setHistory([]);setConfirmClear(false);};
   const pbMap={};exercises.forEach(ex=>{const all=history.filter(s=>s.exerciseId===ex.id);if(all.length>0)pbMap[ex.id]=Math.max(...all.map(s=>s.totalReps));});
   const grouped=history.reduce((acc,s)=>{const l=formatDate(s.date);if(!acc[l])acc[l]=[];acc[l].push(s);return acc;},{});
+Meso();setMesoData(m);})();},[]);
 
   if(detail){
     const ex=exercises.find(e=>e.id===detail.exerciseId),C=ex?.color||"#FF4D4D",best=detail.sets?.length>0?Math.max(...detail.sets):0,isLibre=detail.mode==="libre";
