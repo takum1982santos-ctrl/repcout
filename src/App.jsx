@@ -16,7 +16,8 @@ import { useState, useEffect, useRef, Component } from "react";
 // ✅ Botones celestes (#4a9eff) en libre_select y setup
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
-// ✅ mesociclo anda mejor bug repes arreglado
+// ✅ mesociclo anda mejor bug repes arreglado y en programa rapido
+// ✅ cambio programa rapido x microciclo
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -421,7 +422,7 @@ function InfoModal({onClose}){
         <div style={{display:"flex",flexDirection:"column",gap:"16px",marginBottom:"24px"}}>
           {[
             {icon:"⏱",title:"MODO LIBRE",desc:"Elegís un ejercicio y entrenás sin estructura. Ideal para sesiones cortas o cuando no querés pensar."},
-            {icon:"📋",title:"PROGRAMA RÁPIDO",desc:"Armás tu semana con sesiones planificadas. La app te guía automáticamente: ejercicio → descanso → siguiente."},
+            {icon:"📋",title:"MICROCICLO",desc:"Armás tu semana con sesiones planificadas. La app te guía automáticamente: ejercicio → descanso → siguiente."},
             {icon:"💪",title:"SERIE NORMAL",desc:"Un ejercicio, varios sets con descanso entre ellos."},
             {icon:"⚡",title:"SUPERSERIE",desc:"2 ejercicios alternados. Trabajás más en menos tiempo."},
             {icon:"🔥",title:"SERIE GIGANTE",desc:"3 o más ejercicios encadenados. Alta intensidad."},
@@ -505,15 +506,15 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   const saveWP=async(updated)=>{setWeekPlan(updated);await saveWeekPlan(updated);};
 
   const createSession=async(type)=>{
-    const s={id:Date.now().toString(),name:"Nueva sesión",blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
-    const updated=[...sessions,s];await saveSes(updated);setEditSession(s);setView("session_edit");setShowBlockType(false);
+  const s={id:Date.now().toString(),name:"Nueva sesión",isTemplate:true,blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
+  const updated=[...sessions,s];await saveSes(updated);setEditSession(s);setView("session_edit");setShowBlockType(false);
   };
 
   const assignToDay=async(dayIdx,sessionId)=>{
   if(!sessionId){const wp={...weekPlan,[dayIdx]:null};await saveWP(wp);setSelectedDay(null);return;}
   const original=sessions.find(s=>s.id===sessionId);
   if(!original){const wp={...weekPlan,[dayIdx]:null};await saveWP(wp);setSelectedDay(null);return;}
-  const cloned={...original,id:Date.now().toString()+Math.random().toString(36).slice(2),blocks:original.blocks.map(b=>({...b,id:Date.now().toString()+Math.random().toString(36).slice(2),exercises:b.exercises.map(e=>({...e}))}))};
+  const cloned={...original,id:Date.now().toString()+Math.random().toString(36).slice(2),isTemplate:false,blocks:original.blocks.map(b=>({...b,id:Date.now().toString()+Math.random().toString(36).slice(2),exercises:b.exercises.map(e=>({...e}))}))};
   const updated=[...sessions,cloned];await saveSes(updated);
   const wp={...weekPlan,[dayIdx]:cloned.id};await saveWP(wp);setSelectedDay(null);
   };
@@ -538,7 +539,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
     return(<div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
         <button onClick={onBack} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
-        <div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>PROGRAMA RÁPIDO</div>
+        <div style={{flex:1,textAlign:"center",fontSize:"22px",letterSpacing:"5px"}}>MICROCICLO</div>
         <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FF4D4D",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
 
@@ -580,7 +581,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         </div>}
         {!weekPlan[selectedDay]&&sessions.length===0&&<div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"10px"}}>Todavía no tenés sesiones. Creá una primero.</div>}
         {!weekPlan[selectedDay]&&sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
-          {sessions.map(s=><button key={s.id} onClick={()=>assignToDay(selectedDay,s.id)} style={{padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>)}
+         {sessions.filter(s=>s.isTemplate!==false).map(s=><button key={s.id} onClick={()=>assignToDay(selectedDay,s.id)} style={{padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>)}
         </div>}
         {clipboard&&<button onClick={()=>{if(weekPlan[selectedDay])setConfirmPasteDay(true);else pasteSession(selectedDay);}} style={{width:"100%",marginTop:"8px",padding:"10px",background:"rgba(255,215,0,0.07)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>📋 PEGAR: {clipboard.name}</button>}
         <button onClick={()=>setShowBlockType(true)} style={{width:"100%",marginTop:"8px",padding:"10px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN NUEVA</button>
@@ -638,7 +639,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
       </div>
       {sessions.length===0&&<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:"48px",marginBottom:"12px"}}>📋</div><div style={{fontSize:"14px",letterSpacing:"4px",color:"#444"}}>SIN SESIONES AÚN</div><div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#333",marginTop:"8px"}}>Creá tu primera sesión arriba</div></div>}
       <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-        {sessions.map(ses=>{
+        {sessions.filter(s=>s.isTemplate!==false).map(ses=>{
           const blockCount=ses.blocks.length,exCount=ses.blocks.reduce((a,b)=>a+b.exercises.length,0);
           return(<div key={ses.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"14px 16px"}}>
             <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
@@ -737,7 +738,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
       <button onClick={()=>onStartSession(ses)} disabled={ses.blocks.some(b=>b.exercises.length===0)} style={{width:"100%",padding:"18px",background:ses.blocks.some(b=>b.exercises.length===0)?"rgba(255,255,255,0.05)":"#FF4D4D",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:ses.blocks.some(b=>b.exercises.length===0)?"#333":"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>▶ ARRANCAR SESIÓN</button>
 
       {/* ✅ FIX: ahora va a session_list, no a week — evita pérdida de bloques */}
-      <button onClick={()=>setView("session_list")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← PROGRAMA RÁPIDO</button>
+      <button onClick={()=>setView("session_list")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← MICROCICLO</button>
 
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
         <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
@@ -1593,7 +1594,7 @@ function RepCountApp(){
           </button>
           <button onClick={()=>setScreen("program")} style={{padding:"24px 20px",background:"rgba(255,77,77,0.08)",border:"1px solid rgba(255,77,77,0.25)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,77,77,0.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,77,77,0.08)"}>
             <span style={{fontSize:"36px"}}>📋</span>
-            <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FF4D4D"}}>PROGRAMA RÁPIDO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>Sesiones planificadas · La app te guía sola</div></div>
+            <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FF4D4D"}}>MICROCICLO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>Sesiones planificadas · La app te guía sola</div></div>
             <span style={{marginLeft:"auto",fontSize:"20px",color:"#FF4D4D44"}}>›</span>
           </button>
         <button onClick={()=>setScreen(mesoData?"meso":"meso_creator")} style={{padding:"24px 20px",background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.25)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,215,0,0.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,215,0,0.08)"}>
