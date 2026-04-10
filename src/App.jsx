@@ -16,8 +16,9 @@ import { useState, useEffect, useRef, Component } from "react";
 // ✅ Botones celestes (#4a9eff) en libre_select y setup
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
-// ✅ mesociclo anda mejor bug repes arreglado y en programa rapido
+// ✅ mesociclo anda mejor bug repes arreglado
 // ✅ cambio programa rapido x microciclo
+// ✅ meso y micro ahora descripcion en sesion 
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -1102,8 +1103,21 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
         </div>
         {selSession?(<>
           <div style={{fontSize:"18px",letterSpacing:"2px",color:"#FFD700",marginBottom:"4px"}}>{selSession.name}</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginBottom:"12px"}}>
-            {selSession.blocks.flatMap(b=>b.exercises.map(e=>exercises.find(ex=>ex.id===e.exerciseId)?.name)).filter(Boolean).join(" · ")}
+          <div style={{marginBottom:"12px"}}>
+            {selSession.blocks.map((block,bi)=>{
+              const bt=BLOCK_TYPES[block.type];
+              const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+              return(<div key={bi} style={{marginBottom:"10px"}}>
+                <div style={{fontSize:"11px",letterSpacing:"2px",color:bt.color,marginBottom:"4px"}}>{bt.emoji} {bt.label}</div>
+                {block.exercises.map((ex,ei)=>{
+                  const exData=exercises.find(e=>e.id===ex.exerciseId);
+                  return(<div key={ei} style={{fontFamily:"sans-serif",fontSize:"11px",color:"#aaa",marginLeft:"12px",marginBottom:"3px"}}>
+                    • {exData?.name}: {ex.mode==="time"?`${toMmSs(ex.duration)} × ${block.rounds} rondas`:`${block.rounds} × ${ex.targetReps||10} reps`}
+                  </div>);
+                })}
+                <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginLeft:"12px",marginTop:"2px"}}>Descanso: {block.restAfter}s</div>
+              </div>);
+            })}
           </div>
           <button onClick={()=>onStartSession(selSession,selectedCell.weekIdx,selectedCell.dayIdx)}
             style={{width:"100%",padding:"14px",background:"#FFD700",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px"}}>▶ ARRANCAR</button>
