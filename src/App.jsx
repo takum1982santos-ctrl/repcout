@@ -11,12 +11,12 @@ import { useState, useEffect, useRef, Component } from "react";
 // ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes + fix bug volver)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
 //
-// CAMBIOS EN App-41.2:
+// CAMBIOS EN App-42.1:
 // ✅ Bug fix: "← PROGRAMA RÁPIDO" ya no borra bloques (va a session_list)
 // ✅ Botones celestes (#4a9eff) en libre_select y setup
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
-// ✅ mesociclo incorporado bug repes arreglado
+// ✅ mesociclo anda mejor bug repes arreglado
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -574,8 +574,9 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
               <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginLeft:"12px",marginTop:"4px"}}>Descanso: {block.restAfter}s</div>
             </div>);
           })}
-          <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses)onStartSession(ses);}} style={{width:"100%",padding:"14px",background:"#4caf50",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px",marginTop:"8px"}}>▶ ARRANCAR HOY</button>
-          <button onClick={()=>assignToDay(selectedDay,null)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,77,77,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FF4D4D44",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>QUITAR</button>
+        <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses)onStartSession(ses);}} style={{width:"100%",padding:"14px",background:"#4caf50",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px",marginTop:"8px"}}>▶ ARRANCAR HOY</button>
+        <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses){setEditSession(ses);setView("session_edit");}}} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px"}}>✏️ EDITAR SESIÓN</button>
+        <button onClick={()=>assignToDay(selectedDay,null)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,77,77,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FF4D4D44",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>QUITAR</button>
         </div>}
         {!weekPlan[selectedDay]&&sessions.length===0&&<div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"10px"}}>Todavía no tenés sesiones. Creá una primero.</div>}
         {!weekPlan[selectedDay]&&sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
@@ -913,7 +914,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
   const[showPicker,setShowPicker]=useState(null);
   const[showBlockType,setShowBlockType]=useState(false);
 
-  const sessions=Object.values(mesoData?.sessions||{});
+  const sessions=Object.values(mesoData?.sessions||{}).filter(s=>s.isTemplate!==false);
   const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 
   const persistMeso=async(updated)=>{await saveMeso(updated);onMesoUpdate(updated);};
@@ -924,14 +925,14 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
   const original=mesoData.sessions[sessionId];
   if(!original){u.cycle.weeks[weekIdx].days[dayIdx]=null;await persistMeso(u);setSelectedCell(null);return;}
   const clonedId=Date.now().toString()+Math.random().toString(36).slice(2);
-  const cloned={...JSON.parse(JSON.stringify(original)),id:clonedId};
+  const cloned={...JSON.parse(JSON.stringify(original)),id:clonedId,isTemplate:false};
   u.sessions[clonedId]=cloned;
   u.cycle.weeks[weekIdx].days[dayIdx]=clonedId;
   await persistMeso(u);setSelectedCell(null);
 };
 
   const createSession=async(type)=>{
-    const s={id:Date.now().toString(),name:"Nueva sesión",blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
+    const s={id:Date.now().toString(),name:"Nueva sesión",isTemplate:true,blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
     const u={...mesoData,sessions:{...mesoData.sessions,[s.id]:s}};
     await persistMeso(u);setEditSession(s);setShowBlockType(false);setView("session_edit");
   };
