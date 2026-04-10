@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Component } from "react";
 
-// MAPA App-42.0
+// MAPA App-42.1
 // ├── ErrorBoundary
 // ├── DATA (categorías, ejercicios, pasos, defaults)
 // ├── BLOCK_TYPES (normal/superset/giantset)
@@ -11,12 +11,12 @@ import { useState, useEffect, useRef, Component } from "react";
 // ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes + fix bug volver)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
 //
-// CAMBIOS EN App-42.0:
+// CAMBIOS EN App-41.2:
 // ✅ Bug fix: "← PROGRAMA RÁPIDO" ya no borra bloques (va a session_list)
 // ✅ Botones celestes (#4a9eff) en libre_select y setup
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
-// ✅ se agrego mesosiclo
+// ✅ mesociclo incorporado bug repes arreglado
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -510,7 +510,12 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   };
 
   const assignToDay=async(dayIdx,sessionId)=>{
-    const wp={...weekPlan,[dayIdx]:sessionId||null};await saveWP(wp);setSelectedDay(null);
+  if(!sessionId){const wp={...weekPlan,[dayIdx]:null};await saveWP(wp);setSelectedDay(null);return;}
+  const original=sessions.find(s=>s.id===sessionId);
+  if(!original){const wp={...weekPlan,[dayIdx]:null};await saveWP(wp);setSelectedDay(null);return;}
+  const cloned={...original,id:Date.now().toString()+Math.random().toString(36).slice(2),blocks:original.blocks.map(b=>({...b,id:Date.now().toString()+Math.random().toString(36).slice(2),exercises:b.exercises.map(e=>({...e}))}))};
+  const updated=[...sessions,cloned];await saveSes(updated);
+  const wp={...weekPlan,[dayIdx]:cloned.id};await saveWP(wp);setSelectedDay(null);
   };
 
   const pasteSession=async(dayIdx)=>{
@@ -914,10 +919,16 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
   const persistMeso=async(updated)=>{await saveMeso(updated);onMesoUpdate(updated);};
 
   const assignDay=async(weekIdx,dayIdx,sessionId)=>{
-    const u=JSON.parse(JSON.stringify(mesoData));
-    u.cycle.weeks[weekIdx].days[dayIdx]=sessionId||null;
-    await persistMeso(u);setSelectedCell(null);
-  };
+  const u=JSON.parse(JSON.stringify(mesoData));
+  if(!sessionId){u.cycle.weeks[weekIdx].days[dayIdx]=null;await persistMeso(u);setSelectedCell(null);return;}
+  const original=mesoData.sessions[sessionId];
+  if(!original){u.cycle.weeks[weekIdx].days[dayIdx]=null;await persistMeso(u);setSelectedCell(null);return;}
+  const clonedId=Date.now().toString()+Math.random().toString(36).slice(2);
+  const cloned={...JSON.parse(JSON.stringify(original)),id:clonedId};
+  u.sessions[clonedId]=cloned;
+  u.cycle.weeks[weekIdx].days[dayIdx]=clonedId;
+  await persistMeso(u);setSelectedCell(null);
+};
 
   const createSession=async(type)=>{
     const s={id:Date.now().toString(),name:"Nueva sesión",blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
