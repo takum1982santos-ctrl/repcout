@@ -17,8 +17,7 @@ import { useState, useEffect, useRef, Component } from "react";
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
 // ✅ mesociclo anda mejor bug repes arreglado
-// ✅ cambio programa rapido x microciclo
-// ✅ meso y micro ahora descripcion en sesion 
+// ✅ cambio programa rapido x microciclo se agrego pantalla sesiones y botones nuevos 
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -499,6 +498,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
   const[selectedDay,setSelectedDay]=useState(null);
   const[confirmPasteDay,setConfirmPasteDay]=useState(false);
   const[copyFlash,setCopyFlash]=useState(false);
+  const[confirmDeleteId,setConfirmDeleteId]=useState(null);
   const DIAS=["LUN","MAR","MIÉ","JUE","VIE","SÁB","DOM"];
 
   useEffect(()=>{(async()=>{const s=await loadSessions(),w=await loadWeekPlan();setSessions(s);setWeekPlan(w);})();},[]);
@@ -529,7 +529,12 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
     const wp={...weekPlan,[dayIdx]:newSes.id};await saveWP(wp);
     setConfirmPasteDay(false);setSelectedDay(null);
   };
-
+  
+  const deleteSession=async(id)=>{
+    const upd=sessions.filter(s=>s.id!==id);await saveSes(upd);
+    const nw={};Object.entries(weekPlan).forEach(([k,v])=>{nw[k]=v===id?null:v;});
+    await saveWP(nw);setWeekPlan(nw);setConfirmDeleteId(null);
+  };
   const saveEditSession=async(updated)=>{
     const all=sessions.map(s=>s.id===updated.id?updated:s);setEditSession(updated);await saveSes(all);
   };
@@ -582,7 +587,13 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         </div>}
         {!weekPlan[selectedDay]&&sessions.length===0&&<div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"10px"}}>Todavía no tenés sesiones. Creá una primero.</div>}
         {!weekPlan[selectedDay]&&sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
-         {sessions.filter(s=>s.isTemplate!==false).map(s=><button key={s.id} onClick={()=>assignToDay(selectedDay,s.id)} style={{padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>)}
+          {sessions.filter(s=>s.isTemplate!==false).map(s=>(
+            <div key={s.id} style={{display:"flex",alignItems:"center",gap:"4px"}}>
+              <button onClick={()=>assignToDay(selectedDay,s.id)} style={{flex:1,padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>
+              <button onClick={(e)=>{e.stopPropagation();setEditSession(s);setView("session_edit");}} style={{padding:"10px",background:"none",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"8px",color:"#555",cursor:"pointer",fontSize:"16px",lineHeight:1}}>✏️</button>
+              <button onClick={(e)=>{e.stopPropagation();setConfirmDeleteId(s.id);}} style={{padding:"10px",background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",lineHeight:1}}>🗑</button>
+            </div>
+          ))}
         </div>}
         {clipboard&&<button onClick={()=>{if(weekPlan[selectedDay])setConfirmPasteDay(true);else pasteSession(selectedDay);}} style={{width:"100%",marginTop:"8px",padding:"10px",background:"rgba(255,215,0,0.07)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>📋 PEGAR: {clipboard.name}</button>}
         <button onClick={()=>setShowBlockType(true)} style={{width:"100%",marginTop:"8px",padding:"10px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"10px",fontSize:"11px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN NUEVA</button>
@@ -624,9 +635,10 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
           <div style={{fontSize:"18px",letterSpacing:"3px",color:BLOCK_TYPES[showTypeInfo].color,textAlign:"center",marginBottom:"12px"}}>{BLOCK_TYPES[showTypeInfo].label}</div>
           <div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#aaa",lineHeight:1.6,textAlign:"center",marginBottom:"8px"}}>{BLOCK_TYPES[showTypeInfo].desc}</div>
           <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555",textAlign:"center",marginBottom:"20px"}}>Descanso sugerido entre bloques: <span style={{color:BLOCK_TYPES[showTypeInfo].color}}>{BLOCK_TYPES[showTypeInfo].restAfter}s</span></div>
-          <button onClick={()=>setShowTypeInfo(null)} style={{width:"100%",padding:"14px",background:BLOCK_TYPES[showTypeInfo].color,border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>OK</button>
+        <button onClick={()=>setShowTypeInfo(null)} style={{width:"100%",padding:"14px",background:BLOCK_TYPES[showTypeInfo].color,border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>OK</button>
         </div>
       </div>}
+      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px sol  id rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
     </div>);
   }
 
@@ -646,7 +658,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
             <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
               <div style={{flex:1}}><div style={{fontSize:"18px",letterSpacing:"2px"}}>{ses.name}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{blockCount} bloque{blockCount!==1?"s":""} · {exCount} ejercicio{exCount!==1?"s":""}</div></div>
  <button onClick={(e)=>{e.stopPropagation();setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"1px solid rgba(255,255,255,0.1)",color:"#555",cursor:"pointer",fontSize:"18px",padding:"6px 10px",borderRadius:"8px",lineHeight:1}}>✏️</button>
-              <button onClick={async()=>{const updated=sessions.filter(s=>s.id!==ses.id);await saveSes(updated);}} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
+              <button onClick={()=>setConfirmDeleteId(ses.id)} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
             </div>
             <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
               {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}</div>
@@ -661,7 +673,8 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
           </div>
           <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
         </div>
-      </div>}
+     </div>}
+      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px sol  id rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
     </div>);
   }
 
@@ -915,11 +928,18 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
   const[editSession,setEditSession]=useState(null);
   const[showPicker,setShowPicker]=useState(null);
   const[showBlockType,setShowBlockType]=useState(false);
+  const[confirmDeleteId,setConfirmDeleteId]=useState(null);
 
   const sessions=Object.values(mesoData?.sessions||{}).filter(s=>s.isTemplate!==false);
   const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 
   const persistMeso=async(updated)=>{await saveMeso(updated);onMesoUpdate(updated);};
+  const deleteSession=async(id)=>{
+    const u=JSON.parse(JSON.stringify(mesoData));
+    delete u.sessions[id];
+    u.cycle.weeks.forEach(w=>Object.keys(w.days).forEach(d=>{if(w.days[d]===id)w.days[d]=null;}));
+    await persistMeso(u);setConfirmDeleteId(null);
+  };
 
   const assignDay=async(weekIdx,dayIdx,sessionId)=>{
   const u=JSON.parse(JSON.stringify(mesoData));
@@ -1042,6 +1062,35 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
       </div>
     );
   }
+  
+  // ── Vista lista de sesiones (meso) ──
+  if(view==="session_list")return(
+    <div style={{width:"100%",maxWidth:"420px"}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
+        <button onClick={()=>setView("almanac")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← MESOCICLO</button>
+        <div style={{flex:1,textAlign:"center",fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>MIS SESIONES</div>
+        <button onClick={()=>setShowBlockType(true)} style={{background:"none",border:"none",color:"#FFD700",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>+ NUEVA</button>
+      </div>
+      {sessions.length===0&&<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:"48px",marginBottom:"12px"}}>📋</div><div style={{fontSize:"14px",letterSpacing:"4px",color:"#444"}}>SIN SESIONES AÚN</div><div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#333",marginTop:"8px"}}>Creá tu primera sesión arriba</div></div>}
+      <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+        {sessions.map(ses=>{
+          const blockCount=ses.blocks.length,exCount=ses.blocks.reduce((a,b)=>a+b.exercises.length,0);
+          return(<div key={ses.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,215,0,0.15)",borderRadius:"14px",padding:"14px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
+              <div style={{flex:1}}><div style={{fontSize:"18px",letterSpacing:"2px",color:"#FFD700"}}>{ses.name}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{blockCount} bloque{blockCount!==1?"s":""} · {exCount} ejercicio{exCount!==1?"s":""}</div></div>
+              <button onClick={(e)=>{e.stopPropagation();setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"1px solid rgba(255,215,0,0.2)",color:"#FFD700",cursor:"pointer",fontSize:"18px",padding:"6px 10px",borderRadius:"8px",lineHeight:1}}>✏️</button>
+              <button onClick={()=>setConfirmDeleteId(ses.id)} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
+            </div>
+            <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+              {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}
+            </div>
+          </div>);
+        })}
+      </div>
+      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px sol  id rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}><div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}><div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div><div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>{Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}</div><button onClick={()=>setShowBlockType(false)} style={{width:"100%",p  adding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+    </div>
+  );
 
   // ── Vista almanaque ──
   if(!mesoData||!mesoData.cycle)return null;
@@ -1058,6 +1107,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
           <div style={{fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>{cycle.name.toUpperCase()}</div>
           <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>📅 MESOCICLO · {cycle.totalWeeks} semanas</div>
         </div>
+        <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FFD700",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
 
       {/* Header días */}
@@ -1129,8 +1179,13 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
           <>
             {sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px",marginBottom:"10px"}}>
               <div style={{fontSize:"9px",letterSpacing:"3px",color:"#444",marginBottom:"4px"}}>TUS SESIONES</div>
-              {sessions.map(s=><button key={s.id} onClick={()=>assignDay(selectedCell.weekIdx,selectedCell.dayIdx,s.id)}
-                style={{padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>)}
+              {sessions.map(s=>(
+              <div key={s.id} style={{display:"flex",alignItems:"center",gap:"4px"}}>
+                <button onClick={()=>assignDay(selectedCell.weekIdx,selectedCell.dayIdx,s.id)} style={{flex:1,padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>
+                <button onClick={(e)=>{e.stopPropagation();setEditSession(s);setView("session_edit");}} style={{padding:"10px",background:"none",border:"1px solid rgba(255,215,0,0.2)",borderRadius:"8px",color:"#FFD700",cursor:"pointer",fontSize:"16px",lineHeight:1}}>✏️</button>
+                <button onClick={(e)=>{e.stopPropagation();setConfirmDeleteId(s.id);}} style={{padding:"10px",background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",lineHeight:1}}>🗑</button>
+              </div>
+            ))}
             </div>}
             <button onClick={()=>setShowBlockType(true)}
               style={{width:"100%",padding:"12px",background:"transparent",border:"1px dashed rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"3px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ CREAR SESIÓN NUEVA</button>
@@ -1152,6 +1207,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
           <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
         </div>
       </div>}
+      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
     </div>
   );
 }
