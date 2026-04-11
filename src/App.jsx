@@ -17,7 +17,7 @@ import { useState, useEffect, useRef, Component } from "react";
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
 // ✅ mesociclo anda mejor bug repes arreglado
-// ✅ cambio programa rapido x microciclo se agrego pantalla sesiones y botones nuevos 
+// ✅ cambio programa rapido x microciclo
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -535,6 +535,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
     const nw={};Object.entries(weekPlan).forEach(([k,v])=>{nw[k]=v===id?null:v;});
     await saveWP(nw);setWeekPlan(nw);setConfirmDeleteId(null);
   };
+  
   const saveEditSession=async(updated)=>{
     const all=sessions.map(s=>s.id===updated.id?updated:s);setEditSession(updated);await saveSes(all);
   };
@@ -951,7 +952,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
   u.sessions[clonedId]=cloned;
   u.cycle.weeks[weekIdx].days[dayIdx]=clonedId;
   await persistMeso(u);setSelectedCell(null);
-};
+  };
 
   const createSession=async(type)=>{
     const s={id:Date.now().toString(),name:"Nueva sesión",isTemplate:true,blocks:[{id:Date.now().toString()+"b",type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter}]};
