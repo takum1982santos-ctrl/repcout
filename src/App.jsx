@@ -958,6 +958,35 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
     );
   }
 
+  // ── Vista lista de sesiones (meso) ──
+  if(view==="session_list")return(
+    <div style={{width:"100%",maxWidth:"420px"}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
+        <button onClick={()=>setView("almanac")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← MESOCICLO</button>
+        <div style={{flex:1,textAlign:"center",fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>MIS SESIONES</div>
+        <button onClick={()=>setShowBlockType(true)} style={{background:"none",border:"none",color:"#FFD700",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>+ NUEVA</button>
+      </div>
+      {sessions.length===0&&<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:"48px",marginBottom:"12px"}}>📋</div><div style={{fontSize:"14px",letterSpacing:"4px",color:"#444"}}>SIN SESIONES AÚN</div><div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#333",marginTop:"8px"}}>Creá tu primera sesión arriba</div></div>}
+      <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+        {sessions.map(ses=>{
+          const blockCount=ses.blocks.length,exCount=ses.blocks.reduce((a,b)=>a+b.exercises.length,0);
+          return(<div key={ses.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,215,0,0.15)",borderRadius:"14px",padding:"14px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
+              <div style={{flex:1}}><div style={{fontSize:"18px",letterSpacing:"2px",color:"#FFD700"}}>{ses.name}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{blockCount} bloque{blockCount!==1?"s":""} · {exCount} ejercicio{exCount!==1?"s":""}</div></div>
+              <button onClick={(e)=>{e.stopPropagation();setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"1px solid rgba(255,215,0,0.2)",color:"#FFD700",cursor:"pointer",fontSize:"18px",padding:"6px 10px",borderRadius:"8px",lineHeight:1}}>✏️</button>
+              <button onClick={()=>setConfirmDeleteId(ses.id)} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
+            </div>
+            <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+              {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}
+            </div>
+          </div>);
+        })}
+      </div>
+      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}><div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}><div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div><div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>{Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}</div><button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+    </div>
+  );
+
   // ── Vista almanaque ──
   if(!mesoData||!mesoData.cycle)return null;
   const{cycle}=mesoData;
@@ -1581,7 +1610,7 @@ function RepCountApp(){
         <div style={{fontSize:"11px",letterSpacing:"4px",color:"#444",marginBottom:"10px"}}>{countdownLeft>1?"SEG PARA ARRANCAR":"¡YA!"}</div>
         <button onClick={launchSession} style={{marginTop:"8px",padding:"12px 32px",background:"transparent",border:`1px solid ${C}44`,borderRadius:"12px",color:"#555",fontSize:"12px",letterSpacing:"3px",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>SALTAR</button>
       </div>}
-}
+  }
 
       {/* ── COUNTING ── */}
       {screen==="counting"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1611,7 +1640,7 @@ function RepCountApp(){
         </div>
         <button onClick={resetAll} style={{width:"100%",padding:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#444",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
-}
+  }
 
       {/* ── LIBRE ── */}
       {screen==="libre"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1628,7 +1657,7 @@ function RepCountApp(){
         <button onClick={()=>{clearInterval(timerRef.current);setScreen("finished");playBeep("victory");}} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#888",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏹ TERMINAR</button>
         <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
-}
+  }
 
       {/* ── REST ── */}
       {screen==="rest"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1647,7 +1676,7 @@ function RepCountApp(){
         <button onClick={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");}} style={{width:"100%",padding:"16px",background:bt.color,border:"none",borderRadius:"14px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⚡ SALTAR</button>
         <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
-}
+  }
 
       {/* ── FINISHED ── */}
       {screen==="finished"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center",position:"relative"}}>
@@ -1665,7 +1694,7 @@ function RepCountApp(){
           <button onClick={resetAll} style={{flex:1,padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#777",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>INICIO</button>
         </div>
       </div>}
-}
+  }
 
       {showInfo&&<InfoModal onClose={()=>setShowInfo(false)}/>}
 
