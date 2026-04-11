@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Component } from "react";
 
-// MAPA App-42.1
+// MAPA App-42.2
 // ├── ErrorBoundary
 // ├── DATA (categorías, ejercicios, pasos, defaults)
 // ├── BLOCK_TYPES (normal/superset/giantset)
@@ -11,13 +11,14 @@ import { useState, useEffect, useRef, Component } from "react";
 // ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes + fix bug volver)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
 //
-// CAMBIOS EN App-42.1:
+// CAMBIOS EN App-42.2:
 // ✅ Bug fix: "← PROGRAMA RÁPIDO" ya no borra bloques (va a session_list)
 // ✅ Botones celestes (#4a9eff) en libre_select y setup
 // ✅ Popup "última sesión" en libre_select
 // ✅ Botón HISTORIAL en libre_select
 // ✅ mesociclo anda mejor bug repes arreglado
 // ✅ cambio programa rapido x microciclo
+// ✅ nuevo sesiones en meso y botones nuevos editar borrar 
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
