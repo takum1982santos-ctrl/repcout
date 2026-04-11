@@ -920,8 +920,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
   }
   
   // ── Vista lista de sesiones ──
-  if(view==="session_list"){
-    return(
+  if(view==="session_list"){return(
     <div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
         <button onClick={()=>setView("almanac")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← MESOCICLO</button>
@@ -1565,14 +1564,14 @@ function RepCountApp(){
             <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FFD700"}}>MESOCICLO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>{mesoData?`${mesoData.cycle.name} · ${mesoData.cycle.totalWeeks} semanas`:"Ciclo multi-semana con progresión"}</div></div>
             <span style={{marginLeft:"auto",fontSize:"20px",color:"rgba(255,215,0,0.44)"}}>›</span>
           </button>
-        </div>
+  
         <button onClick={()=>setScreen("history")} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",color:"#fff"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.03)"}>
           <span style={{fontSize:"16px"}}>📊</span>
           <div style={{fontSize:"13px",letterSpacing:"3px",color:"#666"}}>HISTORIAL</div>
           <span style={{fontSize:"12px",color:"#333",marginLeft:"auto"}}>›</span>
         </button>
       </div>}
-}
+
 
       {/* ── SETUP ── */}
       {screen==="setup"&&selected&&(<div style={{width:"100%",maxWidth:"420px",zIndex:1}}>
@@ -1610,7 +1609,7 @@ function RepCountApp(){
         <div style={{fontSize:"11px",letterSpacing:"4px",color:"#444",marginBottom:"10px"}}>{countdownLeft>1?"SEG PARA ARRANCAR":"¡YA!"}</div>
         <button onClick={launchSession} style={{marginTop:"8px",padding:"12px 32px",background:"transparent",border:`1px solid ${C}44`,borderRadius:"12px",color:"#555",fontSize:"12px",letterSpacing:"3px",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>SALTAR</button>
       </div>}
-  }
+  
 
       {/* ── COUNTING ── */}
       {screen==="counting"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1640,7 +1639,7 @@ function RepCountApp(){
         </div>
         <button onClick={resetAll} style={{width:"100%",padding:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#444",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
-  }
+  
 
       {/* ── LIBRE ── */}
       {screen==="libre"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1657,14 +1656,14 @@ function RepCountApp(){
         <button onClick={()=>{clearInterval(timerRef.current);setScreen("finished");playBeep("victory");}} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#888",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏹ TERMINAR</button>
         <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
-  }
+  
 
       {/* ── REST ── */}
       {screen==="rest"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
         {paused&&<PauseOverlay onResume={()=>setPaused(false)} onSkip={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");setPaused(false);}} onAbandon={resetAll} setRestLeft={setRestLeft} restLeft={restLeft} isRest={true}/>}
         <div style={{fontSize:"13px",letterSpacing:"6px",color:"#555",marginBottom:"16px"}}>DESCANSO</div>
         <div style={{position:"relative",width:"180px",height:"180px",margin:"0 auto 16px"}}>
-          <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}><circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/><circle cx="90" cy="90" r="78" fill="none" stroke={bt.color} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${2*Math.PI*78}`} strokeDashoffset={`${2*Math.PI*78*(1-pct/100)}`} style={{transition:"stroke-dashoffset 1s linear",filter:`drop-shadow(0 0 8px ${bt.color})`}}/></svg>
+          <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}><circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/><circle cx="90" cy="90" r="78" fill="none" stroke={C} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${2*Math.PI*78}`} strokeDashoffset={`${2*Math.PI*78*(1-pct/100)}`} style={{transition:"stroke-dashoffset 1s linear",filter:`drop-shadow(0 0 8px ${bt.color})`}}/></svg>
           <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center"}}><div style={{fontSize:"52px",lineHeight:1}}>{fmt(restLeft)}</div><div style={{fontSize:"10px",letterSpacing:"3px",color:"#555",marginTop:"4px"}}>REST</div></div>
         </div>
         <div style={{display:"flex",gap:"10px",justifyContent:"center",marginBottom:"16px"}}>
@@ -1673,10 +1672,10 @@ function RepCountApp(){
         </div>
         <div style={{fontSize:"10px",letterSpacing:"3px",color:"#444",marginBottom:"14px"}}>PRÓXIMO: SET {currentSet+1} / {totalSets}</div>
         <button onClick={()=>setPaused(true)} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#888",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏸ PAUSAR</button>
-        <button onClick={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");}} style={{width:"100%",padding:"16px",background:bt.color,border:"none",borderRadius:"14px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⚡ SALTAR</button>
+        <button onClick={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");}} style={{width:"100%",padding:"16px",background:C,border:"none",borderRadius:"14px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⚡ SALTAR</button>
         <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
-  }
+  
 
       {/* ── FINISHED ── */}
       {screen==="finished"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center",position:"relative"}}>
@@ -1694,7 +1693,7 @@ function RepCountApp(){
           <button onClick={resetAll} style={{flex:1,padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#777",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>INICIO</button>
         </div>
       </div>}
-  }
+  
 
       {showInfo&&<InfoModal onClose={()=>setShowInfo(false)}/>}
 
