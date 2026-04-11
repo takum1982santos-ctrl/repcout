@@ -19,7 +19,6 @@ import { useState, useEffect, useRef, Component } from "react";
 // ✅ mesociclo anda mejor bug repes arreglado
 // ✅ cambio programa rapido x microciclo
 // ✅ nuevo sesiones en meso y botones nuevos editar borrar 
-
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -72,10 +71,11 @@ const exerciseSteps = {
   burpee_sin_salto:["De pie","Agachado","Plancha","Flex abajo","Flex arriba","De pie"],
   burpee_con_salto:["De pie","Agachado","Plancha","Flex abajo","Flex arriba","De pie","Salto"],
   jumping_jacks:["Juntos","Abierto"], flexiones:["Arriba","Abajo"],
-  flexiones_diamante:["Arriba","Abajo"], pike_pushup:["Arriba","Abajo"], dips:["Arriba","Abajo"],
-  dominadas:["Abajo","Arriba"], dominada_supina:["Abajo","Arriba"], dominada_neutra:["Abajo","Arriba"],
-  remo_australiano:["Abajo","Arriba"], sentadillas:["De pie","Abajo"], zancadas:["De pie","Abajo"],
-  sissy_squat:["De pie","Abajo"], sentadilla_una_pierna:["De pie","Abajo"], plancha:["HOLD"],
+  flexiones_diamante:["Arriba","Abajo"], pike_pushup:["Plancha","Pushup_down"],
+  dips:["De pie","Abajo"], dominadas:["De pie","Abajo"], dominada_supina:["De pie","Abajo"],
+  remo_australiano:["De pie","Abajo"], sentadillas:["De pie","Abajo"],
+  zancadas:["De pie","Abajo"], sissy_squat:["De pie","Abajo"],
+  sentadilla_una_pierna:["De pie","Abajo"], plancha:["Plancha"],
 };
 
 const exerciseDefaults = {
@@ -266,7 +266,7 @@ function PoseView({color,exerciseId,onRep,active,facingMode,onFlipCamera,onReady
   const HL={flexiones:[[5,7,9],[6,8,10]],flexiones_diamante:[[5,7,9],[6,8,10]],pike_pushup:[[5,7,9],[6,8,10]],dips:[[5,7,9],[6,8,10]],dominadas:[[5,7,9],[6,8,10]],dominada_supina:[[5,7,9],[6,8,10]],dominada_neutra:[[5,7,9],[6,8,10]],remo_australiano:[[5,7,9],[6,8,10]],sentadillas:[[11,13,15],[12,14,16]],zancadas:[[11,13,15],[12,14,16]],sissy_squat:[[11,13,15],[12,14,16]],sentadilla_una_pierna:[[11,13,15],[12,14,16]],jumping_jacks:[[15,16],[9,10]],burpee_sin_salto:[[5,11,13],[6,12,14]],burpee_con_salto:[[5,11,13],[6,12,14]],plancha:[[5,11,15],[6,12,16]]};
   const CONN=[[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
   const handleRep=()=>{onRep();rfRef.current=true;setRepFlash(true);setTimeout(()=>{rfRef.current=false;setRepFlash(false);},400);};
-  const handleAngle=({angle,phase,conf})=>{setLiveAngle(angle);setLivePhase(phase);setLiveConf(conf);if(phase!==lpRef.current){lpRef.current=phase;onPhaseChange?.(phase);}};
+  const handleAngle=({angle,phase,conf})=>{setLiveAngle(angle);setLivePhase(phase);setLiveConf(conf);if(phase!==lpRef.current){lpRef.current=phase;onPhaseChange?.(phase);}}
   const{videoRef,keypointsRef}=useMoveNet({active,exerciseId,onRep:handleRep,onStatus:setStatus,onAngle:handleAngle,facingMode,onReady});
   const laRef=useRef(null),lpvRef=useRef(null);
   useEffect(()=>{laRef.current=liveAngle;},[liveAngle]);
@@ -583,16 +583,13 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
               <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginLeft:"12px",marginTop:"4px"}}>Descanso: {block.restAfter}s</div>
             </div>);
           })}
-        <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses)onStartSession(ses);}} style={{width:"100%",padding:"14px",background:"#4caf50",border:"none",borderRadius:"10px",fontSize:"16px",letterSpacing:"4px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px",marginTop:"8px"}}>▶ ARRANCAR HOY</button>
-        <button onClick={()=>{const ses=sessions.find(s=>s.id===weekPlan[selectedDay]);if(ses){setEditSession(ses);setView("session_edit");}}} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FFD700",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"6px"}}>✏️ EDITAR SESIÓN</button>
-        <button onClick={()=>assignToDay(selectedDay,null)} style={{width:"100%",padding:"10px",background:"transparent",border:"1px solid rgba(255,77,77,0.3)",borderRadius:"10px",fontSize:"12px",letterSpacing:"2px",color:"#FF4D4D44",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>QUITAR</button>
         </div>}
         {!weekPlan[selectedDay]&&sessions.length===0&&<div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#555",marginBottom:"10px"}}>Todavía no tenés sesiones. Creá una primero.</div>}
         {!weekPlan[selectedDay]&&sessions.length>0&&<div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
           {sessions.filter(s=>s.isTemplate!==false).map(s=>(
             <div key={s.id} style={{display:"flex",alignItems:"center",gap:"4px"}}>
               <button onClick={()=>assignToDay(selectedDay,s.id)} style={{flex:1,padding:"10px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"10px",color:"#fff",cursor:"pointer",textAlign:"left",fontSize:"13px",letterSpacing:"1px",fontFamily:"'Bebas Neue',sans-serif"}}>{s.name}</button>
-              <button onClick={(e)=>{e.stopPropagation();setEditSession(s);setView("session_edit");}} style={{padding:"10px",background:"none",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"8px",color:"#555",cursor:"pointer",fontSize:"16px",lineHeight:1}}>✏️</button>
+              <button onClick={(e)=>{e.stopPropagation();setEditSession(s);setView("session_edit");}} style={{padding:"10px",background:"none",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"8px",color:"#FFD700",cursor:"pointer",fontSize:"16px",lineHeight:1}}>✏️</button>
               <button onClick={(e)=>{e.stopPropagation();setConfirmDeleteId(s.id);}} style={{padding:"10px",background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",lineHeight:1}}>🗑</button>
             </div>
           ))}
@@ -607,7 +604,7 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
         <div style={{background:"#111",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%"}}>
           <div style={{fontSize:"28px",textAlign:"center",marginBottom:"12px"}}>📋</div>
           <div style={{fontSize:"14px",letterSpacing:"3px",textAlign:"center",marginBottom:"8px"}}>REEMPLAZAR SESIÓN</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#888",textAlign:"center",marginBottom:"20px"}}>Este día ya tiene una sesión asignada. ¿Querés reemplazarla con la copia de "{clipboard?.name}"?</div>
+          <div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#aaa",marginBottom:"20px"}}>Este día ya tiene una sesión asignada. ¿Querés reemplazarla con la copia de "{clipboard?.name}"?</div>
           <button onClick={()=>pasteSession(selectedDay)} style={{width:"100%",padding:"14px",background:"#FFD700",border:"none",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>SÍ, REEMPLAZAR</button>
           <button onClick={()=>setConfirmPasteDay(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
         </div>
@@ -615,162 +612,18 @@ function ProgramScreen({onBack,onStartSession,clipboard,setClipboard}){
 
       {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
         <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
-          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"6px",textAlign:"center"}}>TIPO DE SESIÓN</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555",textAlign:"center",marginBottom:"20px"}}>Tocá el ⓘ para saber más</div>
+          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div>
           <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
             {Object.entries(BLOCK_TYPES).map(([k,bt])=>(
-              <div key={k} style={{display:"flex",gap:"8px",alignItems:"center"}}>
-                <button onClick={()=>createSession(k)} style={{flex:1,padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}>
-                  <span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}
-                </button>
-                <button onClick={()=>setShowTypeInfo(k)} style={{width:"36px",height:"36px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"50%",color:"#888",cursor:"pointer",fontSize:"14px",flexShrink:0}}>ⓘ</button>
-              </div>
+              <div key={k} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</div>
             ))}
           </div>
           <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
         </div>
-      </div>}
-
-      {showTypeInfo&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:250,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-        <div style={{background:"#111",border:`1px solid ${BLOCK_TYPES[showTypeInfo].color}44`,borderRadius:"20px",padding:"28px 24px",maxWidth:"360px",width:"100%"}}>
-          <div style={{fontSize:"36px",textAlign:"center",marginBottom:"12px"}}>{BLOCK_TYPES[showTypeInfo].emoji}</div>
-          <div style={{fontSize:"18px",letterSpacing:"3px",color:BLOCK_TYPES[showTypeInfo].color,textAlign:"center",marginBottom:"12px"}}>{BLOCK_TYPES[showTypeInfo].label}</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#aaa",lineHeight:1.6,textAlign:"center",marginBottom:"8px"}}>{BLOCK_TYPES[showTypeInfo].desc}</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#555",textAlign:"center",marginBottom:"20px"}}>Descanso sugerido entre bloques: <span style={{color:BLOCK_TYPES[showTypeInfo].color}}>{BLOCK_TYPES[showTypeInfo].restAfter}s</span></div>
-        <button onClick={()=>setShowTypeInfo(null)} style={{width:"100%",padding:"14px",background:BLOCK_TYPES[showTypeInfo].color,border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>OK</button>
-        </div>
-      </div>}
-      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px sol  id rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
-    </div>);
-  }
-
-  // ── Vista lista de sesiones ──
-  if(view==="session_list"){
-    return(<div style={{width:"100%",maxWidth:"420px"}}>
-      <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
-        <button onClick={()=>setView("week")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← SEMANA</button>
-        <div style={{flex:1,textAlign:"center",fontSize:"18px",letterSpacing:"4px"}}>MIS SESIONES</div>
-        <button onClick={()=>setShowBlockType(true)} style={{background:"none",border:"none",color:"#FF4D4D",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>+ NUEVA</button>
-      </div>
-      {sessions.length===0&&<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:"48px",marginBottom:"12px"}}>📋</div><div style={{fontSize:"14px",letterSpacing:"4px",color:"#444"}}>SIN SESIONES AÚN</div><div style={{fontFamily:"sans-serif",fontSize:"12px",color:"#333",marginTop:"8px"}}>Creá tu primera sesión arriba</div></div>}
-      <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
-        {sessions.filter(s=>s.isTemplate!==false).map(ses=>{
-          const blockCount=ses.blocks.length,exCount=ses.blocks.reduce((a,b)=>a+b.exercises.length,0);
-          return(<div key={ses.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"14px",padding:"14px 16px"}}>
-            <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
-              <div style={{flex:1}}><div style={{fontSize:"18px",letterSpacing:"2px"}}>{ses.name}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{blockCount} bloque{blockCount!==1?"s":""} · {exCount} ejercicio{exCount!==1?"s":""}</div></div>
- <button onClick={(e)=>{e.stopPropagation();setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"1px solid rgba(255,255,255,0.1)",color:"#555",cursor:"pointer",fontSize:"18px",padding:"6px 10px",borderRadius:"8px",lineHeight:1}}>✏️</button>
-              <button onClick={()=>setConfirmDeleteId(ses.id)} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
-            </div>
-            <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-              {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}</div>
-          </div>);
-        })}
-      </div>
-      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-        <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
-          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div>
-          <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
-            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
-          </div>
-          <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
-        </div>
      </div>}
-      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px sol  id rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
-    </div>);
-  }
-
-  // ── Vista editor de sesión ──
-  if(view==="session_edit"&&editSession){
-    const ses=editSession;
-    const updateName=async(name)=>{ const u={...ses,name}; await saveEditSession(u); };
-    const addBlock=async(type)=>{const b={id:Date.now().toString(),type,rounds:3,exercises:[],restWithin:BLOCK_TYPES[type].restWithin,restAfter:BLOCK_TYPES[type].restAfter};const u={...ses,blocks:[...ses.blocks,b]};await saveEditSession(u);};
-    const removeBlock=async(bi)=>{const u={...ses,blocks:ses.blocks.filter((_,i)=>i!==bi)};await saveEditSession(u);};
-    const updateBlock=async(bi,field,val)=>{const b=[...ses.blocks];b[bi]={...b[bi],[field]:val};const u={...ses,blocks:b};await saveEditSession(u);};
-    const addExToBlock=async(bi,ex)=>{const b=[...ses.blocks];const bt=BLOCK_TYPES[b[bi].type];if(b[bi].exercises.length>=bt.maxEx)return;const def=exerciseDefaults[ex.id]||{duration:120,sets:3};b[bi].exercises=[...b[bi].exercises,{exerciseId:ex.id,duration:def.duration,mode:"time"}];const u={...ses,blocks:b};await saveEditSession(u);setShowPicker(null);};
-    const removeExFromBlock=async(bi,ei)=>{const b=[...ses.blocks];b[bi].exercises=b[bi].exercises.filter((_,i)=>i!==ei);const u={...ses,blocks:b};await saveEditSession(u);};
-    const updateEx=async(bi,ei,field,val)=>{const b=[...ses.blocks];b[bi].exercises[ei]={...b[bi].exercises[ei],[field]:val};const u={...ses,blocks:b};await saveEditSession(u);};
-    const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-
-    return(<div style={{width:"100%",maxWidth:"420px"}}>
-      <div style={{display:"flex",alignItems:"center",marginBottom:"20px"}}>
-        <button onClick={()=>setView("session_list")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← SESIONES</button>
-        <div style={{flex:1,textAlign:"center",fontSize:"14px",letterSpacing:"4px"}}>EDITAR SESIÓN</div>
-        <button onClick={()=>{setClipboard({blocks:ses.blocks,name:ses.name});setCopyFlash(true);setTimeout(()=>setCopyFlash(false),1500);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:"20px",padding:"0 4px",opacity:copyFlash?1:0.5,transition:"opacity 0.3s"}} title="Copiar sesión">{copyFlash?"✅":"📋"}</button>
-      </div>
-
-      <input value={ses.name} onChange={e=>updateName(e.target.value)} placeholder="Nombre de la sesión"
-        style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"12px",color:"#fff",fontSize:"18px",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"2px",outline:"none",boxSizing:"border-box",marginBottom:"20px"}}/>
-
-      {ses.blocks.map((block,bi)=>{
-        const bt=BLOCK_TYPES[block.type];
-        return(<div key={block.id} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${bt.color}33`,borderRadius:"14px",padding:"14px",marginBottom:"12px"}}>
-          <div style={{display:"flex",alignItems:"center",marginBottom:"12px"}}>
-            <span style={{fontSize:"18px",marginRight:"8px"}}>{bt.emoji}</span>
-            <div style={{flex:1}}><div style={{fontSize:"13px",letterSpacing:"2px",color:bt.color}}>{bt.label}</div></div>
-            <button onClick={()=>removeBlock(bi)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:"16px",padding:"0 4px"}}>✕</button>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
-            <div style={{fontSize:"9px",letterSpacing:"3px",color:"#555",width:"60px"}}>RONDAS</div>
-            <button onClick={()=>updateBlock(bi,"rounds",Math.max(1,block.rounds-1))} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${bt.color}44`,background:"transparent",color:bt.color,fontSize:"16px",cursor:"pointer"}}>−</button>
-            <div style={{flex:1,textAlign:"center",fontSize:"20px",color:bt.color}}>{block.rounds}</div>
-            <button onClick={()=>updateBlock(bi,"rounds",block.rounds+1)} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${bt.color}44`,background:"transparent",color:bt.color,fontSize:"16px",cursor:"pointer"}}>+</button>
-          </div>
-          {block.exercises.map((ex,ei)=>{
-            const exData=exercises.find(e=>e.id===ex.exerciseId);
-            return(<div key={ei} style={{background:"rgba(255,255,255,0.04)",borderRadius:"10px",padding:"10px",marginBottom:"8px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}}>
-                <span style={{fontSize:"18px"}}>{exData?.icon}</span>
-                <div style={{flex:1,fontSize:"13px",letterSpacing:"1px",color:exData?.color||"#fff"}}>{exData?.name?.toUpperCase()}</div>
-                <button onClick={()=>removeExFromBlock(bi,ei)} style={{background:"none",border:"none",color:"#444",cursor:"pointer",fontSize:"14px",padding:0}}>✕</button>
-              </div>
-              <div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>
-                {["time","reps"].map(m=><button key={m} onClick={()=>updateEx(bi,ei,"mode",m)} style={{flex:1,padding:"6px",background:ex.mode===m?`${bt.color}33`:"transparent",border:`1px solid ${ex.mode===m?bt.color+"66":"rgba(255,255,255,0.1)"}`,borderRadius:"6px",color:ex.mode===m?bt.color:"#555",cursor:"pointer",fontSize:"10px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>{m==="time"?"⏱ TIEMPO":"🔢 REPS"}</button>)}
-              </div>
-              {ex.mode==="time"&&<div style={{display:"flex",alignItems:"center",gap:"6px"}}>
-                <button onClick={()=>updateEx(bi,ei,"duration",Math.max(15,ex.duration-15))} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>−</button>
-                <div style={{flex:1,textAlign:"center",fontSize:"16px",color:"#fff"}}>{toMmSs(ex.duration)}</div>
-                <button onClick={()=>updateEx(bi,ei,"duration",ex.duration+15)} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>+</button>
-              </div>}
-              {ex.mode==="reps"&&<div style={{display:"flex",alignItems:"center",gap:"6px"}}>
-                <button onClick={()=>updateEx(bi,ei,"targetReps",Math.max(1,(ex.targetReps||10)-1))} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>−</button>
-                <div style={{flex:1,textAlign:"center",fontSize:"16px",color:"#fff"}}>{ex.targetReps||10} <span style={{fontSize:"11px",color:"#555"}}>reps</span></div>
-                <button onClick={()=>updateEx(bi,ei,"targetReps",(ex.targetReps||10)+1)} style={{width:"30px",height:"30px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"14px",cursor:"pointer"}}>+</button>
-              </div>}
-            </div>);
-          })}
-          {block.exercises.length<bt.maxEx&&<button onClick={()=>setShowPicker({bi})} style={{width:"100%",padding:"10px",background:"transparent",border:`1px dashed ${bt.color}44`,borderRadius:"10px",color:bt.color+"88",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"'Bebas Neue',sans-serif"}}>+ AGREGAR EJERCICIO {block.type==="superset"?`(${block.exercises.length}/2)`:block.type==="normal"?"(1/1)":`(${block.exercises.length}/${bt.maxEx})`}</button>}
-          <div style={{display:"flex",alignItems:"center",gap:"8px",marginTop:"10px",borderTop:"1px solid rgba(255,255,255,0.06)",paddingTop:"10px"}}>
-            <div style={{fontSize:"8px",letterSpacing:"3px",color:"#444",flex:1}}>DESCANSO TRAS BLOQUE</div>
-            <button onClick={()=>updateBlock(bi,"restAfter",Math.max(15,block.restAfter-15))} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"12px",cursor:"pointer"}}>−</button>
-            <div style={{fontSize:"14px",color:"#fff",minWidth:"36px",textAlign:"center"}}>{block.restAfter}s</div>
-            <button onClick={()=>updateBlock(bi,"restAfter",block.restAfter+15)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid rgba(255,255,255,0.1)",background:"transparent",color:"#888",fontSize:"12px",cursor:"pointer"}}>+</button>
-          </div>
-        </div>);
-      })}
-
-      <button onClick={()=>setShowBlockType(true)} style={{width:"100%",padding:"14px",background:"transparent",border:"1px dashed rgba(255,255,255,0.15)",borderRadius:"12px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"12px"}}>+ AGREGAR BLOQUE</button>
-
-      <button onClick={()=>onStartSession(ses)} disabled={ses.blocks.some(b=>b.exercises.length===0)} style={{width:"100%",padding:"18px",background:ses.blocks.some(b=>b.exercises.length===0)?"rgba(255,255,255,0.05)":"#FF4D4D",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:ses.blocks.some(b=>b.exercises.length===0)?"#333":"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>▶ ARRANCAR SESIÓN</button>
-
-      {/* ✅ FIX: ahora va a session_list, no a week — evita pérdida de bloques */}
-      <button onClick={()=>setView("session_list")} style={{width:"100%",marginTop:"10px",padding:"12px",background:"#4a9eff",border:"none",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#fff",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>← MICROCICLO</button>
-
-      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-        <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
-          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE BLOQUE</div>
-          <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
-            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>{addBlock(k);setShowBlockType(false);}} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span><div><div>{bt.label}</div><div style={{fontFamily:"sans-serif",fontSize:"9px",color:bt.color+"88",fontWeight:"normal",marginTop:"2px"}}>{bt.desc.slice(0,50)}...</div></div></button>))}
-          </div>
-          <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
-        </div>
-      </div>}
-
       {showPicker&&<ExercisePicker onSelect={(ex)=>addExToBlock(showPicker.bi,ex)} onClose={()=>setShowPicker(null)}/>}
-    </div>);
-  }
-
-  return null;
+    </div>
+  );
 }
 
 // ─── CATEGORY ITEM (libre_select) ────────────────────────────────────────────
@@ -778,7 +631,7 @@ function CategoryItem({cat,onSelect}){
   const[open,setOpen]=useState(false);
   return(
     <div>
-      <button onClick={()=>setOpen(!open)} style={{width:"100%",background:open?`${cat.color}18`:"rgba(255,255,255,0.04)",border:`1px solid ${cat.color}${open?"88":"33"}`,borderRadius:open?"14px 14px 0 0":"14px",padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",transition:"all 0.2s"}}>
+      <button onClick={()=>setOpen(!open)} style={{width:"100%",background:open?`${cat.color}18`:"rgba(255,255,255,0.04)",border:`1px solid ${cat.color}${open?"88":"33"}`,borderRadius:open?"14px 14px 0 0":"14px",padding:"14px 18px",display:"flex",alignItems:"center",gap:"12px",cursor:"pointer",color:"#fff",transition:"all 0.2s",padding:0}}>
         <span style={{fontSize:"24px"}}>{cat.icon}</span>
         <div style={{flex:1,textAlign:"left"}}><div style={{fontSize:"20px",letterSpacing:"3px",color:open?cat.color:"#fff"}}>{cat.name.toUpperCase()}</div></div>
         <span style={{fontSize:"16px",color:open?cat.color:"#444",transform:open?"rotate(90deg)":"rotate(0deg)",display:"inline-block",transition:"transform 0.2s"}}>›</span>
@@ -877,7 +730,7 @@ function CycleCreatorScreen({onBack,onCreate}){
       <div style={{marginBottom:"24px"}}>
         <div style={{fontSize:"10px",letterSpacing:"4px",color:"#555",marginBottom:"8px"}}>NOMBRE DEL CICLO</div>
         <input value={cycleName} onChange={e=>setCycleName(e.target.value)} placeholder="Ej: Fuerza Enero"
-          style={{width:"100%",padding:"14px 16px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"12px",color:"#fff",fontSize:"18px",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"2px",outline:"none",boxSizing:"border-box"}}/>
+          style={{width:"100%",padding:"14px 16px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:"12px",color:"#fff",fontSize:"18px",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:"2px",outline:"none",boxSizing:"border-box",marginBottom:"20px"}}/>
       </div>
       <div style={{marginBottom:"32px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"}}>
@@ -934,6 +787,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
 
   const sessions=Object.values(mesoData?.sessions||{}).filter(s=>s.isTemplate!==false);
   const toMmSs=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  const[progress,setProgress]=useState(0);
 
   const persistMeso=async(updated)=>{await saveMeso(updated);onMesoUpdate(updated);};
   const deleteSession=async(id)=>{
@@ -978,7 +832,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
     if(!editSession)return;
     const b=[...editSession.blocks];const bt=BLOCK_TYPES[b[bi].type];
     if(b[bi].exercises.length>=bt.maxEx)return;
-    const def=exerciseDefaults[ex.id]||{duration:120};
+    const def=exerciseDefaults[ex.id]||{duration:120,sets:3};
     b[bi].exercises=[...b[bi].exercises,{exerciseId:ex.id,duration:def.duration,mode:"time"}];
     await saveEditSession({...editSession,blocks:b});setShowPicker(null);
   };
@@ -1065,8 +919,9 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
     );
   }
   
-  // ── Vista lista de sesiones (meso) ──
-  if(view==="session_list")return(
+  // ── Vista lista de sesiones ──
+  if(view==="session_list"){
+    return(
     <div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
         <button onClick={()=>setView("almanac")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← MESOCICLO</button>
@@ -1084,15 +939,24 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
               <button onClick={()=>setConfirmDeleteId(ses.id)} style={{background:"none",border:"none",color:"#333",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
             </div>
             <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-              {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}
-            </div>
+              {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}</div>
           </div>);
         })}
       </div>
-      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px sol  id rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
-      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}><div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}><div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div><div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>{Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}</div><button onClick={()=>setShowBlockType(false)} style={{width:"100%",p  adding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+        <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
+          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE BLOQUE</div>
+          <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
+            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>addBlock(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
+          </div>
+          <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+        </div>
+     </div>}
+      {showPicker&&<ExercisePicker onSelect={(ex)=>addExToBlock(showPicker.bi,ex)} onClose={()=>setShowPicker(null)}/>}
     </div>
-  );
+    );
+  }
 
   // ── Vista almanaque ──
   if(!mesoData||!mesoData.cycle)return null;
@@ -1105,10 +969,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
     <div style={{width:"100%",maxWidth:"420px"}}>
       <div style={{display:"flex",alignItems:"center",marginBottom:"20px"}}>
         <button onClick={onBack} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← VOLVER</button>
-        <div style={{flex:1,textAlign:"center"}}>
-          <div style={{fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>{cycle.name.toUpperCase()}</div>
-          <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>📅 MESOCICLO · {cycle.totalWeeks} semanas</div>
-        </div>
+        <div style={{flex:1,textAlign:"center",fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>{cycle.name.toUpperCase()}</div>
         <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FFD700",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
 
@@ -1204,12 +1065,12 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
         <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
           <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div>
           <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
-            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
+            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>addBlock(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
           </div>
           <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
         </div>
-      </div>}
-      {confirmDeleteId&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}><div style={{background:"#111",border:"1px solid rgba(255,77,77,0.4)",borderRadius:"20px",padding:"28px 24px",maxWidth:"340px",width:"100%",textAlign:"center"}}><div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"12px"}}>BORRAR SESIÓN</div><div style={{fontFamily:"sans-serif",fontSize:"13px",color:"#ccc",marginBottom:"20px"}}>¿Borrar "{sessions.find(s=>s.id===confirmDeleteId)?.name}"? No se puede deshacer.</div><button onClick={()=>deleteSession(confirmDeleteId)} style={{width:"100%",padding:"14px",background:"#FF4D4D",border:"none",borderRadius:"12px",fontSize:"16px",letterSpacing:"3px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>BORRAR</button><button onClick={()=>setConfirmDeleteId(null)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#555",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button></div></div>}
+     </div>}
+      {showPicker&&<ExercisePicker onSelect={(ex)=>addExToBlock(showPicker.bi,ex)} onClose={()=>setShowPicker(null)}/>}
     </div>
   );
 }
@@ -1381,7 +1242,7 @@ function RepCountApp(){
           const nr=r+1;
           if(repGoal>0&&nr===repGoal&&!goalReached){setGoalReached(true);playBeep("goal");}
           if(historicalPRRef.current>0&&nr>historicalPRRef.current&&!prShownRef.current){prShownRef.current=true;setPrBroken(true);setTimeout(()=>setPrBroken(false),3000);}
-          if(seriesMode==="reps"&&nr>=repsPerSet){setTimeout(()=>{setSetRepsLog(log=>{const nl=[...log,nr];setCurrentSet(cs=>{if(cs>=totalSets){setScreen("finished");playBeep("victory");}else{setRestLeft(restDuration);setScreen("rest");playBeep("whistle");}return cs;});return nl;});setReps(0);setActiveStep(0);},400);}
+          if(seriesMode==="reps"&&nr>=repsPerSet){setTimeout(()=>{setSetRepsLog(log=>{const nl=[...log,nr];setCurrentSet(cs=>{if(cs>=totalSets){setScreen("finished");playBeep("victory");}else{setRestLeft(restDuration);setScreen("rest");playBeep("ready");}return cs;});return nl;});setReps(0);setActiveStep(0);},400);}
           return nr;
         });
         setActiveStep(0);setAnimating(false);
@@ -1584,7 +1445,7 @@ function RepCountApp(){
     </div>
   );
 
-  if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>{setScreen(historyFrom);setHistoryFrom("home");}}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
+  if(screen==="history")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"40px 20px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",top:"-100px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"600px",background:"radial-gradient(circle, #FF4D4D22 0%, transparent 70%)",pointerEvents:"none"}}/><HistoryScreen onBack={()=>{setScreen(historyFrom);setHistoryFrom("home");}}/><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');@keyframes spin{to{transform:rotate(360deg)}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style></div>);
 
   if(screen==="program")return(<div style={{minHeight:"100vh",background:"#0A0A0F",fontFamily:"'Bebas Neue','Arial Black',sans-serif",color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",padding:"40px 20px",overflow:"hidden"}}><div style={{width:"100%",maxWidth:"420px"}}><ProgramScreen onBack={()=>setScreen("home")} onStartSession={(ses)=>{startProgram(ses);}} clipboard={clipboard} setClipboard={setClipboard}/></div><style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style></div>);
 
@@ -1667,8 +1528,9 @@ function RepCountApp(){
           <button onClick={()=>setScreen("program")} style={{padding:"24px 20px",background:"rgba(255,77,77,0.08)",border:"1px solid rgba(255,77,77,0.25)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,77,77,0.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,77,77,0.08)"}>
             <span style={{fontSize:"36px"}}>📋</span>
             <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FF4D4D"}}>MICROCICLO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>Sesiones planificadas · La app te guía sola</div></div>
-            <span style={{marginLeft:"auto",fontSize:"20px",color:"#FF4D4D44"}}>›</span>
+            <span style={{marginLeft:"auto",fontSize:"20px",color:"#FFD70044"}}>›</span>
           </button>
+        </div>
         <button onClick={()=>setScreen(mesoData?"meso":"meso_creator")} style={{padding:"24px 20px",background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.25)",borderRadius:"16px",color:"#fff",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"16px",transition:"all 0.2s"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,215,0,0.14)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,215,0,0.08)"}>
             <span style={{fontSize:"36px"}}>📅</span>
             <div><div style={{fontSize:"22px",letterSpacing:"4px",color:"#FFD700"}}>MESOCICLO</div><div style={{fontFamily:"sans-serif",fontSize:"11px",color:"#888",marginTop:"4px"}}>{mesoData?`${mesoData.cycle.name} · ${mesoData.cycle.totalWeeks} semanas`:"Ciclo multi-semana con progresión"}</div></div>
@@ -1681,6 +1543,7 @@ function RepCountApp(){
           <span style={{fontSize:"12px",color:"#333",marginLeft:"auto"}}>›</span>
         </button>
       </div>}
+}
 
       {/* ── SETUP ── */}
       {screen==="setup"&&selected&&(<div style={{width:"100%",maxWidth:"420px",zIndex:1}}>
@@ -1715,9 +1578,10 @@ function RepCountApp(){
           <svg width="200" height="200" style={{position:"absolute",top:0,left:0,transform:"rotate(-90deg)"}}><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10"/><circle cx="100" cy="100" r="88" fill="none" stroke={C} strokeWidth="10" strokeDasharray={`${2*Math.PI*88}`} strokeDashoffset={`${2*Math.PI*88*(countdownLeft/5)}`} strokeLinecap="round" style={{transition:"stroke-dashoffset 0.9s linear"}}/></svg>
           <div style={{fontSize:"96px",color:C,fontFamily:"'DSEG7 Classic',monospace",textShadow:`0 0 30px ${C}88`,lineHeight:1}}>{countdownLeft}</div>
         </div>
-        <div style={{fontSize:"11px",letterSpacing:"4px",color:"#444"}}>{countdownLeft>1?"SEG PARA ARRANCAR":"¡YA!"}</div>
+        <div style={{fontSize:"11px",letterSpacing:"4px",color:"#444",marginBottom:"10px"}}>{countdownLeft>1?"SEG PARA ARRANCAR":"¡YA!"}</div>
         <button onClick={launchSession} style={{marginTop:"8px",padding:"12px 32px",background:"transparent",border:`1px solid ${C}44`,borderRadius:"12px",color:"#555",fontSize:"12px",letterSpacing:"3px",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>SALTAR</button>
       </div>}
+}
 
       {/* ── COUNTING ── */}
       {screen==="counting"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1727,7 +1591,7 @@ function RepCountApp(){
         {seriesMode!=="reps"&&<div style={{marginBottom:"10px",padding:"0 8px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}}>
             <div style={{fontSize:"9px",letterSpacing:"3px",color:"#444"}}>TIEMPO</div>
-            <div style={{fontSize:"20px",letterSpacing:"2px",color:timeLeft<=10?"#FF4D4D":C,fontVariantNumeric:"tabular-nums"}}>{fmt(timeLeft)}</div>
+            <div style={{fontSize:"20px",color:C,fontVariantNumeric:"tabular-nums"}}>{fmt(timeLeft)}</div>
           </div>
           <div style={{height:"4px",borderRadius:"2px",background:"rgba(255,255,255,0.06)",overflow:"hidden"}}><div style={{height:"100%",borderRadius:"2px",width:`${pct}%`,background:timeLeft<=10?"#FF4D4D":C,transition:"width 1s linear"}}/></div>
         </div>}
@@ -1738,7 +1602,7 @@ function RepCountApp(){
             <div style={{fontSize:"11px",letterSpacing:"6px",color:"#333",marginTop:"8px"}}>{seriesMode==="reps"?`/ ${repsPerSet} REPS`:"REPS"}</div>
           </div>
         </div>
-        {setRepsLog.length>0&&<div style={{display:"flex",gap:"6px",justifyContent:"center",marginBottom:"10px"}}>{setRepsLog.map((r,i)=><div key={i} style={{padding:"4px 8px",borderRadius:"8px",background:`${C}15`,border:`1px solid ${C}33`,textAlign:"center"}}><div style={{fontSize:"14px",color:C,lineHeight:1}}>{r}</div><div style={{fontSize:"8px",color:"#444",fontFamily:"sans-serif"}}>S{i+1}</div></div>)}</div>}
+        {setRepsLog.length>0&&<div style={{display:"flex",gap:"6px",justifyContent:"center",marginBottom:"10px"}}>{setRepsLog.map((r,i)=>{const best=Math.max(...setRepsLog),p2=best>0?r/best:0;return(<div key={i} style={{flex:1,background:"rgba(255,255,255,0.03)",border:`1px solid ${r===best?C:C+"22"}`,borderRadius:"10px",padding:"10px 6px",position:"relative",overflow:"hidden"}}><div style={{position:"absolute",bottom:0,left:0,right:0,height:`${p2*100}%`,background:`${C}22`}}/><div style={{position:"relative"}}><div style={{fontSize:"22px",color:r===best?C:C+"88"}}>{r}</div><div style={{fontSize:"8px",color:"#444",fontFamily:"sans-serif"}}>S{i+1}</div></div></div>);})}</div>}
         {poseActive&&<div style={{marginBottom:"10px"}}><PoseView key={cameraKey} color={C} exerciseId={selected.id} onRep={simulateRep} active={poseActive} facingMode={facingMode} onFlipCamera={()=>{setFacingMode(m=>m==="user"?"environment":"user");setCameraKey(k=>k+1);}} onReady={()=>setPoseReady(true)} onPhaseChange={p=>setHoldPhase(p)}/></div>}
         <div style={{display:"flex",gap:"8px",marginBottom:"8px"}}>
           <button onClick={simulateRep} style={{flex:1,padding:"12px",background:"rgba(255,255,255,0.04)",border:`1px solid ${C}33`,borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:C+"99",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>{animating?"...":"+ MANUAL"}</button>
@@ -1747,6 +1611,7 @@ function RepCountApp(){
         </div>
         <button onClick={resetAll} style={{width:"100%",padding:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#444",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
+}
 
       {/* ── LIBRE ── */}
       {screen==="libre"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
@@ -1760,16 +1625,17 @@ function RepCountApp(){
           <button onClick={()=>setPoseActive(v=>!v)} style={{padding:"12px 14px",background:poseActive?`${C}22`:"rgba(255,255,255,0.04)",border:`1px solid ${poseActive?C:"rgba(255,255,255,0.1)"}`,borderRadius:"12px",color:poseActive?C:"#555",cursor:"pointer",fontSize:"18px"}}>🤖</button>
           <button onClick={()=>setPaused(true)} style={{padding:"12px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",color:"#888",cursor:"pointer",fontSize:"18px"}}>⏸</button>
         </div>
-        <button onClick={()=>{clearInterval(timerRef.current);setScreen("finished");playBeep("victory");}} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:`1px solid ${C}55`,borderRadius:"12px",fontSize:"15px",letterSpacing:"4px",color:C,cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏹ TERMINAR</button>
-        <button onClick={resetAll} style={{width:"100%",padding:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#444",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
+        <button onClick={()=>{clearInterval(timerRef.current);setScreen("finished");playBeep("victory");}} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#888",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏹ TERMINAR</button>
+        <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
+}
 
       {/* ── REST ── */}
       {screen==="rest"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
         {paused&&<PauseOverlay onResume={()=>setPaused(false)} onSkip={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");setPaused(false);}} onAbandon={resetAll} setRestLeft={setRestLeft} restLeft={restLeft} isRest={true}/>}
         <div style={{fontSize:"13px",letterSpacing:"6px",color:"#555",marginBottom:"16px"}}>DESCANSO</div>
         <div style={{position:"relative",width:"180px",height:"180px",margin:"0 auto 16px"}}>
-          <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}><circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/><circle cx="90" cy="90" r="78" fill="none" stroke={C} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${2*Math.PI*78}`} strokeDashoffset={`${2*Math.PI*78*(1-pct/100)}`} style={{transition:"stroke-dashoffset 1s linear",filter:`drop-shadow(0 0 8px ${C})`}}/></svg>
+          <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}><circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/><circle cx="90" cy="90" r="78" fill="none" stroke={bt.color} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${2*Math.PI*78}`} strokeDashoffset={`${2*Math.PI*78*(1-pct/100)}`} style={{transition:"stroke-dashoffset 1s linear",filter:`drop-shadow(0 0 8px ${bt.color})`}}/></svg>
           <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center"}}><div style={{fontSize:"52px",lineHeight:1}}>{fmt(restLeft)}</div><div style={{fontSize:"10px",letterSpacing:"3px",color:"#555",marginTop:"4px"}}>REST</div></div>
         </div>
         <div style={{display:"flex",gap:"10px",justifyContent:"center",marginBottom:"16px"}}>
@@ -1778,9 +1644,10 @@ function RepCountApp(){
         </div>
         <div style={{fontSize:"10px",letterSpacing:"3px",color:"#444",marginBottom:"14px"}}>PRÓXIMO: SET {currentSet+1} / {totalSets}</div>
         <button onClick={()=>setPaused(true)} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:"#888",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏸ PAUSAR</button>
-        <button onClick={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");}} style={{width:"100%",padding:"16px",background:C,border:"none",borderRadius:"14px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⚡ SALTAR</button>
-        <button onClick={resetAll} style={{width:"100%",padding:"12px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"12px",color:"#444",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
+        <button onClick={()=>{clearInterval(timerRef.current);setCurrentSet(cs=>cs+1);setReps(0);setActiveStep(0);setTimeLeft(duration);setCameraKey(k=>k+1);setPoseReady(false);setScreen("counting");playBeep("go");}} style={{width:"100%",padding:"16px",background:bt.color,border:"none",borderRadius:"14px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⚡ SALTAR</button>
+        <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
       </div>}
+}
 
       {/* ── FINISHED ── */}
       {screen==="finished"&&selected&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center",position:"relative"}}>
@@ -1798,92 +1665,7 @@ function RepCountApp(){
           <button onClick={resetAll} style={{flex:1,padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"13px",letterSpacing:"3px",color:"#777",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>INICIO</button>
         </div>
       </div>}
-
-      {/* ── PROGRAMA: PREP ── */}
-      {screen==="prog_prep"&&activeSession&&<ProgPrepScreen
-        activeSession={activeSession}
-        progBlockIdx={progBlockIdx}
-        progRoundIdx={progRoundIdx}
-        onReady={()=>{
-          const ex=activeSession.blocks[progBlockIdx]?.exercises[0];
-          setScreen("prog_counting");
-          setTimeLeft(ex?.duration||120);
-          setPoseActive(true);setPoseReady(false);
-          playBeep("go");
-        }}
-      />}
-
-      {/* ── PROGRAMA: COUNTING ── */}
-      {screen==="prog_counting"&&activeSession&&(()=>{
-        const block=activeSession.blocks[progBlockIdx];const bt=BLOCK_TYPES[block?.type||"normal"];
-        const ex=block?.exercises[progExIdx];const exData=exercises.find(e=>e.id===ex?.exerciseId);
-        const exColor=exData?.color||"#FF4D4D";
-        const totExInBlock=block?.exercises.length||1;
-        return(<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
-          {paused&&<PauseOverlay onResume={()=>setPaused(false)} onSkip={()=>{clearInterval(timerRef.current);finishProgExercise();setPaused(false);}} onAbandon={resetAll} setRestLeft={()=>{}} restLeft={0} isRest={false}/>}
-          <div style={{fontSize:"9px",letterSpacing:"3px",color:"#555",marginBottom:"4px"}}>{bt.emoji} {bt.label} · BLOQUE {progBlockIdx+1} · RONDA {progRoundIdx+1}/{block?.rounds}</div>
-          {totExInBlock>1&&<div style={{display:"flex",gap:"6px",justifyContent:"center",marginBottom:"6px"}}>{block.exercises.map((_,i)=><div key={i} style={{width:i===progExIdx?"22px":"8px",height:"5px",borderRadius:"3px",background:i<progExIdx?exColor+"88":i===progExIdx?exColor:"rgba(255,255,255,0.1)",transition:"all 0.3s"}}/> )}</div>}
-          <div style={{fontSize:"22px",marginBottom:"4px"}}>{exData?.icon}</div>
-          <div style={{fontSize:"18px",letterSpacing:"2px",color:exColor,marginBottom:"12px"}}>{exData?.name?.toUpperCase()}</div>
-          {ex?.mode!=="reps"&&<div style={{marginBottom:"10px",padding:"0 8px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"4px"}}><div style={{fontSize:"9px",letterSpacing:"3px",color:"#444"}}>TIEMPO</div><div style={{fontSize:"20px",letterSpacing:"2px",color:timeLeft<=10?"#FF4D4D":exColor,fontVariantNumeric:"tabular-nums"}}>{fmt(timeLeft)}</div></div><div style={{height:"4px",borderRadius:"2px",background:"rgba(255,255,255,0.06)",overflow:"hidden"}}><div style={{height:"100%",borderRadius:"2px",width:`${((ex?.duration||120)-timeLeft)/(ex?.duration||120)*100}%`,background:timeLeft<=10?"#FF4D4D":exColor,transition:"width 1s linear"}}/></div></div>}
-          <div style={{position:"relative",width:"200px",height:"200px",margin:"0 auto 12px"}}>
-            {ex?.mode==="reps"&&<svg width="200" height="200" style={{transform:"rotate(-90deg)",position:"absolute",top:0,left:0}}><circle cx="100" cy="100" r="88" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/><circle cx="100" cy="100" r="88" fill="none" stroke={exColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={`${2*Math.PI*88}`} strokeDashoffset={`${2*Math.PI*88*(1-Math.min(progReps/(ex?.targetReps||10),1))}`} style={{transition:"stroke-dashoffset 0.3s ease",filter:`drop-shadow(0 0 10px ${exColor})`}}/></svg>}
-            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",width:"180px"}}><div style={{fontSize:"90px",lineHeight:0.9,color:exColor,fontVariantNumeric:"tabular-nums"}}>{progReps}</div><div style={{fontSize:"11px",letterSpacing:"4px",color:"#333",marginTop:"8px"}}>{ex?.mode==="reps"?`/ ${ex?.targetReps||10} REPS`:"REPS"}</div></div>
-          </div>
-          {poseActive&&exData&&<div style={{marginBottom:"10px"}}><PoseView key={`prog-${progBlockIdx}-${progExIdx}-${cameraKey}`} color={exColor} exerciseId={exData.id} onRep={progSimulateRep} active={poseActive} facingMode={facingMode} onFlipCamera={()=>{setFacingMode(m=>m==="user"?"environment":"user");setCameraKey(k=>k+1);}} onReady={()=>setPoseReady(true)} onPhaseChange={()=>{}}/></div>}
-          <div style={{display:"flex",gap:"8px",marginBottom:"8px"}}>
-            <button onClick={progSimulateRep} style={{flex:1,padding:"12px",background:"rgba(255,255,255,0.04)",border:`1px solid ${exColor}33`,borderRadius:"12px",fontSize:"15px",letterSpacing:"3px",color:exColor+"99",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+ MANUAL</button>
-            <button onClick={()=>setPoseActive(v=>!v)} style={{padding:"12px 14px",background:poseActive?`${exColor}22`:"rgba(255,255,255,0.04)",border:`1px solid ${poseActive?exColor:"rgba(255,255,255,0.1)"}`,borderRadius:"12px",color:poseActive?exColor:"#555",cursor:"pointer",fontSize:"18px"}}>🤖</button>
-            <button onClick={()=>setPaused(true)} style={{padding:"12px 14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",color:"#888",cursor:"pointer",fontSize:"18px"}}>⏸</button>
-          </div>
-          {ex?.mode==="reps"&&<button onClick={()=>{clearInterval(timerRef.current);finishProgExercise();}} style={{width:"100%",padding:"14px",background:exColor,border:"none",borderRadius:"12px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>✓ LISTO</button>}
-          <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
-        </div>);
-      })()}
-
-      {/* ── PROGRAMA: DESCANSO ── */}
-      {screen==="prog_rest"&&activeSession&&(()=>{
-        const block=activeSession.blocks[progBlockIdx];const bt=BLOCK_TYPES[block?.type||"normal"];
-        const nextBlockIdx=block&&progBlockIdx<activeSession.blocks.length-1?progBlockIdx+1:null;
-        const nextBlock=nextBlockIdx!==null?activeSession.blocks[nextBlockIdx]:null;
-        const nextBt=nextBlock?BLOCK_TYPES[nextBlock.type]:null;
-        const title=progIsRestWithin?"CAMBIO DE EJERCICIO":"DESCANSO";
-        return(<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center"}}>
-          {paused&&<PauseOverlay onResume={()=>setPaused(false)} onSkip={()=>{clearInterval(timerRef.current);advanceProgram();setPaused(false);}} onAbandon={resetAll} setRestLeft={setProgRestLeft} restLeft={progRestLeft} isRest={true}/>}
-          <div style={{fontSize:"13px",letterSpacing:"6px",color:"#555",marginBottom:"6px"}}>{title}</div>
-          <div style={{position:"relative",width:"180px",height:"180px",margin:"0 auto 20px"}}>
-            <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}><circle cx="90" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/><circle cx="90" cy="90" r="78" fill="none" stroke={bt.color} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${2*Math.PI*78}`} strokeDashoffset={`${2*Math.PI*78*(progRestLeft/(progIsRestWithin?block?.restWithin||15:block?.restAfter||90))}`} style={{transition:"stroke-dashoffset 1s linear",filter:`drop-shadow(0 0 8px ${bt.color})`}}/></svg>
-            <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center"}}><div style={{fontSize:"52px",lineHeight:1}}>{fmt(progRestLeft)}</div><div style={{fontSize:"9px",letterSpacing:"3px",color:"#555",marginTop:"4px"}}>REST</div></div>
-          </div>
-          {nextBlock&&!progIsRestWithin&&<div style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${nextBt?.color||"#fff"}33`,borderRadius:"14px",padding:"12px",marginBottom:"16px"}}>
-            <div style={{fontSize:"9px",letterSpacing:"4px",color:"#555",marginBottom:"6px"}}>SIGUIENTE BLOQUE</div>
-            <div style={{fontSize:"22px",marginBottom:"4px"}}>{nextBt?.emoji}</div>
-            <div style={{fontSize:"14px",letterSpacing:"2px",color:nextBt?.color}}>{nextBt?.label}</div>
-          </div>}
-          <div style={{display:"flex",gap:"10px",justifyContent:"center",marginBottom:"16px"}}>
-            <button onClick={()=>setProgRestLeft(r=>Math.max(3,r-15))} style={{padding:"10px 22px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#888",fontSize:"15px",letterSpacing:"2px",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>−15s</button>
-            <button onClick={()=>setProgRestLeft(r=>r+15)} style={{padding:"10px 22px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#888",fontSize:"15px",letterSpacing:"2px",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>+15s</button>
-          </div>
-          <button onClick={()=>setPaused(true)} style={{width:"100%",padding:"12px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"14px",letterSpacing:"3px",color:"#888",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⏸ PAUSAR</button>
-          <button onClick={()=>{clearInterval(timerRef.current);advanceProgram();}} style={{width:"100%",padding:"16px",background:bt.color,border:"none",borderRadius:"14px",fontSize:"18px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>⚡ SALTAR</button>
-          <button onClick={resetAll} style={{width:"100%",padding:"10px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",color:"#333",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>ABANDONAR</button>
-        </div>);
-      })()}
-
-      {/* ── PROGRAMA: DONE ── */}
-      {screen==="prog_done"&&activeSession&&<div style={{width:"100%",maxWidth:"420px",zIndex:1,textAlign:"center",position:"relative"}}>
-        {showFireworks&&particles.map(p=><div key={p.id} style={{position:"absolute",top:"50%",left:"50%",width:`${p.size}px`,height:`${p.size}px`,borderRadius:"50%",background:p.color,boxShadow:`0 0 ${p.size*2}px ${p.color}`,animation:`explode-${p.id} 1.5s ease-out forwards`,opacity:0}}/>)}
-        <div style={{fontSize:"13px",letterSpacing:"6px",color:"#FF4D4D",marginBottom:"8px"}}>SESIÓN COMPLETADA 🎉</div>
-        <div style={{fontSize:"22px",letterSpacing:"3px",marginBottom:"24px"}}>{activeSession.name.toUpperCase()}</div>
-        <div style={{display:"flex",flexDirection:"column",gap:"8px",marginBottom:"24px"}}>
-          {progDoneLog.map((item,i)=>{const ex=exercises.find(e=>e.id===item.exerciseId),C2=ex?.color||"#FF4D4D";return(<div key={i} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${C2}33`,borderRadius:"12px",padding:"12px 16px",display:"flex",alignItems:"center",gap:"12px"}}><span style={{fontSize:"20px"}}>{ex?.icon}</span><div style={{flex:1,textAlign:"left"}}><div style={{fontSize:"14px",letterSpacing:"2px",color:C2}}>{ex?.name?.toUpperCase()}</div></div><div style={{textAlign:"right"}}><div style={{fontSize:"28px",color:C2,lineHeight:1}}>{item.reps}</div><div style={{fontSize:"8px",color:"#555",letterSpacing:"2px"}}>REPS</div></div></div>);})}</div>
-        <div style={{background:"rgba(255,77,77,0.08)",border:"1px solid #FF4D4D33",borderRadius:"14px",padding:"16px",marginBottom:"24px"}}>
-          <div style={{fontSize:"11px",letterSpacing:"4px",color:"#555",marginBottom:"4px"}}>TOTAL REPS</div>
-          <div style={{fontSize:"72px",lineHeight:1,color:"#FF4D4D",textShadow:"0 0 40px #FF4D4D88"}}>{progDoneLog.reduce((a,b)=>a+b.reps,0)}</div>
-        </div>
-        <button onClick={()=>startProgram(activeSession)} style={{width:"100%",padding:"18px",background:"#FF4D4D",border:"none",borderRadius:"14px",fontSize:"20px",letterSpacing:"4px",color:"#000",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif",marginBottom:"8px"}}>REPETIR SESIÓN</button>
-        <button onClick={resetAll} style={{width:"100%",padding:"14px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"12px",fontSize:"14px",letterSpacing:"3px",color:"#777",cursor:"pointer",fontFamily:"'Bebas Neue',sans-serif"}}>IR AL INICIO</button>
-      </div>}
+}
 
       {showInfo&&<InfoModal onClose={()=>setShowInfo(false)}/>}
 
@@ -1900,5 +1682,5 @@ function RepCountApp(){
   );
 }
 
-const WrappedApp=()=><ErrorBoundary><RepCountApp/></ErrorBoundary>;
+const WrappedApp=()=><ErrorBoundary><RepCountApp /></ErrorBoundary>;
 export default WrappedApp;
