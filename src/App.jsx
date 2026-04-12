@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Component } from "react";
 
-// MAPA App-42.1
+// MAPA App-42.2
 // ├── ErrorBoundary
 // ├── DATA (categorías, ejercicios, pasos, defaults)
 // ├── BLOCK_TYPES (normal/superset/giantset)
@@ -11,14 +11,12 @@ import { useState, useEffect, useRef, Component } from "react";
 // ├── ProgramScreen ← ACTUALIZADO (preview sesión + colores celestes + fix bug volver)
 // └── RepCountApp (nuevo HOME + flujo libre + flujo programa + pausa overlay)
 //
-// CAMBIOS EN App-42.1:
-// ✅ Bug fix: "← PROGRAMA RÁPIDO" ya no borra bloques (va a session_list)
-// ✅ Botones celestes (#4a9eff) en libre_select y setup
-// ✅ Popup "última sesión" en libre_select
-// ✅ Botón HISTORIAL en libre_select
-// ✅ mesociclo anda mejor bug repes arreglado
-// ✅ cambio programa rapido x microciclo
-// ✅ meso y micro ahora descripcion en sesion 
+// CAMBIOS EN App-42.2:
+// ✅ Botones ✏️ y 🗑 en panel de día (Microciclo y Mesociclo)
+// ✅ Pantalla "MIS SESIONES" en Mesociclo
+// ✅ Confirmación al borrar sesión
+// ✅ Borrar desasigna días automáticamente
+// ✅ Fix estados huérfanos en HistoryScreen
 
 // ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
 class ErrorBoundary extends Component {
@@ -308,10 +306,6 @@ function formatDateShort(iso){const d=new Date(iso);return`${d.getDate()}-${d.ge
 // ─── HISTORY SCREEN ───────────────────────────────────────────────────────────
 function HistoryScreen({onBack}){
   const[history,setHistory]=useState([]);
-const[mesoData,setMesoData]=useState(null);
-const[mesoWeekIdx,setMesoWeekIdx]=useState(null);
-const[mesoDayIdx,setMesoDayIdx]=useState(null);
-const[progSource,setProgSource]=useState("program");
   const[confirmClear,setConfirmClear]=useState(false);
   const[detail,setDetail]=useState(null);
   useEffect(()=>{(async()=>{await seedFakeHistory();const h=await loadHistory();setHistory(h);})();},[]);
@@ -939,6 +933,13 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
     await persistMeso(u);setEditSession(s);setShowBlockType(false);setView("session_edit");
   };
 
+  const deleteSession=async(sessionId)=>{
+  const u=JSON.parse(JSON.stringify(mesoData));
+  delete u.sessions[sessionId];
+  u.cycle.weeks.forEach(w=>{Object.keys(w.days).forEach(d=>{if(w.days[d]===sessionId)w.days[d]=null;});});
+  await persistMeso(u);
+  };
+  
   const saveEditSession=async(upd)=>{
     const u={...mesoData,sessions:{...mesoData.sessions,[upd.id]:upd}};
     setEditSession(upd);await persistMeso(u);
@@ -1042,6 +1043,44 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
       </div>
     );
   }
+  
+  if(view==="session_list"){
+  const templateSessions=Object.values(mesoData?.sessions||{}).filter(s=>s.isTemplate!==false);
+  return(
+    <div style={{width:"100%",maxWidth:"420px"}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:"24px"}}>
+        <button onClick={()=>setView("almanac")} style={{background:"#4a9eff",border:"none",color:"#fff",cursor:"pointer",fontSize:"13px",letterSpacing:"3px",padding:"8px 14px",borderRadius:"8px"}}>← MESOCICLO</button>
+        <div style={{flex:1,textAlign:"center",fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>MIS SESIONES</div>
+        <button onClick={()=>setShowBlockType(true)} style={{background:"none",border:"none",color:"#FFD700",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>+ NUEVA</button>
+      </div>
+      {templateSessions.length===0&&<div style={{textAlign:"center",padding:"60px 20px"}}><div style={{fontSize:"48px",marginBottom:"12px"}}>📋</div><div style={{fontSize:"14px",letterSpacing:"4px",color:"#444"}}>SIN SESIONES AÚN</div></div>}
+      <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+        {templateSessions.map(ses=>{
+          const blockCount=ses.blocks.length,exCount=ses.blocks.reduce((a,b)=>a+b.exercises.length,0);
+          return(<div key={ses.id} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,215,0,0.2)",borderRadius:"14px",padding:"14px 16px"}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:"8px"}}>
+              <div style={{flex:1}}><div style={{fontSize:"18px",letterSpacing:"2px",color:"#FFD700"}}>{ses.name}</div><div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>{blockCount} bloque{blockCount!==1?"s":""} · {exCount} ejercicio{exCount!==1?"s":""}</div></div>
+              <button onClick={()=>{setEditSession(ses);setView("session_edit");}} style={{background:"none",border:"1px solid rgba(255,255,255,0.1)",color:"#555",cursor:"pointer",fontSize:"18px",padding:"6px 10px",borderRadius:"8px",lineHeight:1,marginRight:"6px"}}>✏️</button>
+              <button onClick={()=>deleteSession(ses.id)} style={{background:"none",border:"none",color:"#f44336",cursor:"pointer",fontSize:"16px",padding:"4px"}}>🗑</button>
+            </div>
+            <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+              {ses.blocks.map((b,bi)=>{const bt=BLOCK_TYPES[b.type];return(<div key={bi} style={{background:`${bt.color}18`,border:`1px solid ${bt.color}33`,borderRadius:"8px",padding:"3px 8px",fontSize:"9px",letterSpacing:"1px",color:bt.color}}>{bt.emoji} {bt.label}</div>);})}
+            </div>
+          </div>);
+        })}
+      </div>
+      {showBlockType&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+        <div style={{width:"100%",maxWidth:"420px",background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"24px 16px"}}>
+          <div style={{fontSize:"14px",letterSpacing:"4px",marginBottom:"20px",textAlign:"center"}}>TIPO DE SESIÓN</div>
+          <div style={{display:"flex",flexDirection:"column",gap:"10px",marginBottom:"16px"}}>
+            {Object.entries(BLOCK_TYPES).map(([k,bt])=>(<button key={k} onClick={()=>createSession(k)} style={{padding:"14px 16px",background:`${bt.color}18`,border:`1px solid ${bt.color}44`,borderRadius:"12px",color:bt.color,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",fontFamily:"'Bebas Neue',sans-serif",fontSize:"16px",letterSpacing:"2px"}}><span style={{fontSize:"22px"}}>{bt.emoji}</span>{bt.label}</button>))}
+          </div>
+          <button onClick={()=>setShowBlockType(false)} style={{width:"100%",padding:"12px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"10px",color:"#555",cursor:"pointer",fontSize:"12px",letterSpacing:"3px",fontFamily:"'Bebas Neue',sans-serif"}}>CANCELAR</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
 
   // ── Vista almanaque ──
   if(!mesoData||!mesoData.cycle)return null;
@@ -1058,6 +1097,7 @@ function MesoScreen({onBack,onStartSession,mesoData,onMesoUpdate}){
           <div style={{fontSize:"18px",letterSpacing:"4px",color:"#FFD700"}}>{cycle.name.toUpperCase()}</div>
           <div style={{fontFamily:"sans-serif",fontSize:"10px",color:"#555",marginTop:"2px"}}>📅 MESOCICLO · {cycle.totalWeeks} semanas</div>
         </div>
+        <button onClick={()=>setView("session_list")} style={{background:"none",border:"none",color:"#FFD700",cursor:"pointer",fontSize:"11px",letterSpacing:"2px",fontFamily:"sans-serif",padding:0}}>SESIONES</button>
       </div>
 
       {/* Header días */}
