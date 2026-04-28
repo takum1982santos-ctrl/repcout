@@ -98,38 +98,23 @@ const BLOCK_TYPES = {
 };
 
 // ─── STORAGE ─────────────────────────────────────────────────────────────────
-const STORAGE_KEY    = "repcount-history";
-const PR_KEY         = "repcount-prs";
-const ROUTINES_KEY   = "repcount-routines";
-const SESSIONS_KEY   = "repcount-sessions-v2";
-const WEEKPLAN_KEY   = "repcount-weekplan-v2";
-const MESO_KEY       = "repcount-meso-v1";
+const STORAGE_KEY  = "repcount-history";
+const PR_KEY       = "repcount-prs";
+const SESSIONS_KEY = "repcount-sessions-v2";
+const WEEKPLAN_KEY = "repcount-weekplan-v2";
+const MESO_KEY     = "repcount-meso-v1";
 
-async function loadHistory() { try { const r=await window.storage.get(STORAGE_KEY);return r?JSON.parse(r.value):[]; }catch{return [];} }
-async function saveSession(session) { try{const h=await loadHistory();const u=[session,...h].slice(0,100);await window.storage.set(STORAGE_KEY,JSON.stringify(u));return u;}catch{return null;} }
-async function loadPRs() { try{const r=await window.storage.get(PR_KEY);return r?JSON.parse(r.value):{};}catch{return {};} }
-async function savePR(exerciseId,reps) { try{const prs=await loadPRs();prs[exerciseId]=reps;await window.storage.set(PR_KEY,JSON.stringify(prs));}catch{} }
-async function loadRoutines() { try{const r=await window.storage.get(ROUTINES_KEY);return r?JSON.parse(r.value):{};}catch{return {};} }
-async function saveRoutines(r) { try{await window.storage.set(ROUTINES_KEY,JSON.stringify(r));}catch{} }
-async function clearHistory() { try{await window.storage.delete(STORAGE_KEY);}catch{} }
-
-async function loadSessions() { try{const r=await window.storage.get(SESSIONS_KEY);return r?JSON.parse(r.value):[];}catch{return [];} }
-async function saveSessions(s) { try{await window.storage.set(SESSIONS_KEY,JSON.stringify(s));}catch{} }
-
-async function loadWeekPlan() { try{const r=await window.storage.get(WEEKPLAN_KEY);return r?JSON.parse(r.value):{};}catch{return {};} }
-async function saveWeekPlan(p) { try{await window.storage.set(WEEKPLAN_KEY,JSON.stringify(p));}catch{} }
-async function loadMeso() { try{const r=await window.storage.get(MESO_KEY);return r?JSON.parse(r.value):null;}catch{return null;} }
-async function saveMeso(m) { try{await window.storage.set(MESO_KEY,JSON.stringify(m));}catch{} }
-
-const daysAgo=n=>new Date(Date.now()-n*86400000).toISOString();
-const FAKE_HISTORY=[
-  {id:"f1",date:daysAgo(0),exerciseId:"burpee_con_salto",totalReps:28,sets:[8,10,10],duration:5,rest:60,mode:"series"},
-  {id:"f2",date:daysAgo(0),exerciseId:"flexiones",totalReps:45,sets:[],duration:8,rest:0,mode:"libre",elapsed:480},
-  {id:"f3",date:daysAgo(1),exerciseId:"burpee_sin_salto",totalReps:35,sets:[10,12,13],duration:5,rest:60,mode:"series"},
-  {id:"f4",date:daysAgo(2),exerciseId:"dominadas",totalReps:18,sets:[6,6,6],duration:3,rest:90,mode:"series"},
-  {id:"f5",date:daysAgo(4),exerciseId:"flexiones",totalReps:50,sets:[15,18,17],duration:5,rest:45,mode:"series"},
-];
-async function seedFakeHistory() { try{const e=await loadHistory();if(e.length>0)return;await window.storage.set(STORAGE_KEY,JSON.stringify(FAKE_HISTORY));}catch{} }
+function loadHistory(){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):[];}catch{return [];}}
+function saveSession(session){try{const h=loadHistory();const u=[session,...h].slice(0,100);localStorage.setItem(STORAGE_KEY,JSON.stringify(u));return u;}catch{return null;}}
+function loadPRs(){try{const r=localStorage.getItem(PR_KEY);return r?JSON.parse(r):{};}catch{return {};}}
+function savePR(exerciseId,reps){try{const prs=loadPRs();prs[exerciseId]=reps;localStorage.setItem(PR_KEY,JSON.stringify(prs));}catch{}}
+function clearHistory(){try{localStorage.removeItem(STORAGE_KEY);}catch{}}
+function loadSessions(){try{const r=localStorage.getItem(SESSIONS_KEY);return r?JSON.parse(r):[];}catch{return [];}}
+function saveSessions(s){try{localStorage.setItem(SESSIONS_KEY,JSON.stringify(s));}catch{}}
+function loadWeekPlan(){try{const r=localStorage.getItem(WEEKPLAN_KEY);return r?JSON.parse(r):{};}catch{return {};}}
+function saveWeekPlan(p){try{localStorage.setItem(WEEKPLAN_KEY,JSON.stringify(p));}catch{}}
+function loadMeso(){try{const r=localStorage.getItem(MESO_KEY);return r?JSON.parse(r):null;}catch{return null;}}
+function saveMeso(m){try{localStorage.setItem(MESO_KEY,JSON.stringify(m));}catch{}}
 
 // ─── AUDIO ────────────────────────────────────────────────────────────────────
 function playBeep(type="alarm") {
@@ -308,7 +293,7 @@ function HistoryScreen({onBack}){
   const[history,setHistory]=useState([]);
   const[confirmClear,setConfirmClear]=useState(false);
   const[detail,setDetail]=useState(null);
-  useEffect(()=>{(async()=>{await seedFakeHistory();const h=await loadHistory();setHistory(h);})();},[]);
+  useEffect(()=>{(async()=>{setHistory(loadHistory());})();},[]);
   const handleClear=async()=>{await clearHistory();setHistory([]);setConfirmClear(false);};
   const pbMap={};exercises.forEach(ex=>{const all=history.filter(s=>s.exerciseId===ex.id);if(all.length>0)pbMap[ex.id]=Math.max(...all.map(s=>s.totalReps));});
   const grouped=history.reduce((acc,s)=>{const l=formatDate(s.date);if(!acc[l])acc[l]=[];acc[l].push(s);return acc;},{});
@@ -1317,7 +1302,6 @@ function RepCountApp(){
 
   const[particles]=useState(()=>Array.from({length:24},(_,i)=>({id:i,angle:(i/24)*360,distance:80+Math.random()*120,color:["#FF4D4D","#FFD700","#00C9A7","#6C63FF","#FF8C00","#00BFFF"][i%6],size:4+Math.random()*6})));
 
-  useEffect(()=>{seedFakeHistory();},[]);
   useEffect(()=>{(async()=>{const m=await loadMeso();setMesoData(m);})();},[]);
 
   const C=selected?.color||"#FF4D4D";
