@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Component } from "react";
 
 // MAPA App-42.2
 // ├── ErrorBoundary
-// ├── DATA (categorías, ejercicios, pasos, defaults)
+// ├── DATA (categorías, ejercicios, pasos, defaults )
 // ├── BLOCK_TYPES (normal/superset/giantset)
 // ├── STORAGE (historial, sessions v2, weekly plan)
 // ├── AUDIO
